@@ -247,17 +247,49 @@ window.Egov = (() => {
   }
 
   function documentContentToHtml(content) {
-    const normalized = String(content || "").replace(/\r\n?/g, "\n").trim();
-    if (!normalized) return `<p>Wala pang nailalathalang buong nilalaman ng dokumentong ito.</p>`;
+  const normalized = String(content || "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
 
-    return normalized.split(/\n\s*\n/).map((block) => {
-      const plain = block.trim();
-      const escaped = escapeHtml(plain).replaceAll("\n", "<br>");
-      const isHeading = /^(SEKSYON|SECTION|ARTIKULO|ARTICLE|KABANATA|CHAPTER|PAKSA|SUBJECT)\b/i.test(plain);
-      const isResolutionClause = /^(SAPAGKAT|IPINASIYA|NOW, THEREFORE|WHEREAS|RESOLVED)\b/i.test(plain);
-      return `<p class="${isHeading ? "document-section-title" : ""}${isResolutionClause ? " document-clause" : ""}">${escaped}</p>`;
-    }).join("");
+  if (!normalized) {
+    return `<p>Wala pang nailalathalang buong nilalaman ng dokumentong ito.</p>`;
   }
+
+  function formatInlineText(text) {
+    const escaped = escapeHtml(text);
+
+    // Ang **teksto** ay magiging bold.
+    return escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  }
+
+  return normalized
+    .split(/\n\s*\n/)
+    .map((block) => {
+      const plain = block.trim();
+
+      const formatted = formatInlineText(plain)
+        .replaceAll("\n", "<br>");
+
+      const isHeading =
+        /^(SEKSYON|SECTION|ARTIKULO|ARTICLE|KABANATA|CHAPTER|PAKSA|SUBJECT)\b/i.test(
+          plain
+        );
+
+      const isResolutionClause =
+        /^(SAPAGKAT|IPINASIYA|NOW, THEREFORE|WHEREAS|RESOLVED)\b/i.test(
+          plain
+        );
+
+      return `
+        <p class="${isHeading ? "document-section-title" : ""}${
+          isResolutionClause ? " document-clause" : ""
+        }">
+          ${formatted}
+        </p>
+      `;
+    })
+    .join("");
+}
 
   function cardMedia(item, fallbackImage, fallbackIcon = "📄") {
     const source = imageUrl(item.image || fallbackImage);
