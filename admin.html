@@ -167,6 +167,40 @@
                 </label>
               </div>
 
+              <section id="autoNumberFields" class="entry-option-panel hidden">
+                <label class="checkbox-label">
+                  <input id="autoNumberInput" type="checkbox" checked />
+                  <span>Awtomatikong italaga ang kasunod na numero sa unang pag-publish</span>
+                </label>
+                <p class="field-help" id="autoNumberHelp">Magkahiwalay ang bilang ng EO, memorandum, at resolusyon. Babalik ito sa 01 sa bagong taon.</p>
+              </section>
+
+              <section id="announcementPinFields" class="entry-option-panel pinned-option-panel hidden">
+                <div class="admin-subsection-heading compact-heading">
+                  <div>
+                    <span class="eyebrow">Mahalagang Anunsyo</span>
+                    <h3>I-pin sa itaas</h3>
+                  </div>
+                  <p>Hanggang tatlong aktibong anunsyo ang maaaring naka-pin.</p>
+                </div>
+                <label class="checkbox-label">
+                  <input id="pinnedInput" type="checkbox" />
+                  <span>I-pin bilang mahalagang anunsyo</span>
+                </label>
+                <div class="form-row pin-detail-fields">
+                  <label>
+                    Ayos ng Pin
+                    <input id="pinOrderInput" type="number" min="1" max="3" value="1" />
+                    <span class="field-help">1 ang pinakamauuna.</span>
+                  </label>
+                  <label>
+                    Huling Araw ng Pagka-pin
+                    <input id="pinExpiresInput" type="date" />
+                    <span class="field-help">Opsyonal. Pagkalipas nito, regular na anunsyo na lamang ito.</span>
+                  </label>
+                </div>
+              </section>
+
               <label>
                 Link ng Larawan
                 <input id="imageInput" type="url" placeholder="https://... o public Google Drive share link" />

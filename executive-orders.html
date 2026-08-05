@@ -51,7 +51,18 @@
             <span>Maghanap ng dokumento</span>
             <input id="archiveSearch" type="search" placeholder="Ilagay ang pamagat, numero, o salita…" />
           </label>
-          <div class="archive-count" id="archiveCount">— dokumento</div>
+          <div class="archive-controls">
+            <label class="archive-sort">
+              <span>Ayusin ayon sa</span>
+              <select id="archiveSort">
+                <option value="newest">Pinakabago</option>
+                <option value="oldest">Pinakaluma</option>
+                <option value="numberAsc">Numero — Pataas</option>
+                <option value="numberDesc">Numero — Pababa</option>
+              </select>
+            </label>
+            <div class="archive-count" id="archiveCount">— dokumento</div>
+          </div>
         </div>
         <div class="document-grid" id="archiveGrid">
           <div class="loading-card">Kinukuha ang mga dokumento…</div>

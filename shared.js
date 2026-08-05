@@ -91,6 +91,9 @@ const EGOV_FALLBACK = {
       image: "",
       published: true,
       order: 1,
+      pinned: false,
+      pinOrder: 1,
+      pinExpires: "",
       content: "## Maligayang Pagdating sa Los Santos eGov\n\nDito ilalathala ang mahahalagang **anunsyo**, mga kasalukuyang *proyekto*, at mga nalalapit na kaganapan ng Tanggapan ng Punong Lungsod.\n\n- Mga programa at proyekto ng lungsod\n- Mga pampublikong kaganapan\n- Mga paalala at opisyal na pabatid\n\nAbangan ang mga susunod na update mula sa Pamahalaang Panglungsod ng Los Santos."
     }
   ],
@@ -220,12 +223,87 @@ window.Egov = (() => {
       });
   }
 
-  function newest(items) {
-    return published(items).sort((a, b) => {
+  function getLocalTodayIso() {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  }
+
+  function isPinnedAnnouncement(item) {
+    const pinned = item && (item.pinned === true || String(item.pinned).toLowerCase() === "true");
+    if (!pinned) return false;
+    return !item.pinExpires || String(item.pinExpires) >= getLocalTodayIso();
+  }
+
+  function documentSequence(item) {
+    const stored = Number(item && item.publicationSequence || 0);
+    if (stored) return stored;
+    const number = String(item && item.number || "");
+    const memoMatch = number.match(/(?:Blg\.?\s*)?\d{4}\s*[-–]\s*(\d+)/i);
+    if (memoMatch) return Number(memoMatch[1]);
+    const generalMatch = number.match(/Blg\.?\s*(\d+)/i);
+    return generalMatch ? Number(generalMatch[1]) : 0;
+  }
+
+  function documentYear(item) {
+    const stored = Number(item && item.publicationYear || 0);
+    if (stored) return stored;
+    const number = String(item && item.number || "");
+    const seriesMatch = number.match(/(?:Serye\s+ng\s+|Series\s+of\s+)(\d{4})/i);
+    if (seriesMatch) return Number(seriesMatch[1]);
+    const memoMatch = number.match(/(?:Blg\.?\s*)?(\d{4})\s*[-–]\s*\d+/i);
+    if (memoMatch) return Number(memoMatch[1]);
+    return Number(String(item && item.date || "").slice(0, 4)) || 0;
+  }
+
+  function sortDocuments(items, mode = "newest") {
+    const visible = published(items);
+    return visible.sort((a, b) => {
+      if (mode === "oldest") {
+        const dateDiff = String(a.date || "").localeCompare(String(b.date || ""));
+        if (dateDiff !== 0) return dateDiff;
+        return documentSequence(a) - documentSequence(b);
+      }
+
+      if (mode === "numberAsc" || mode === "numberDesc") {
+        const direction = mode === "numberAsc" ? 1 : -1;
+        const yearDiff = (documentYear(a) - documentYear(b)) * direction;
+        if (yearDiff !== 0) return yearDiff;
+        const sequenceDiff = (documentSequence(a) - documentSequence(b)) * direction;
+        if (sequenceDiff !== 0) return sequenceDiff;
+        return String(a.date || "").localeCompare(String(b.date || "")) * direction;
+      }
+
       const dateDiff = String(b.date || "").localeCompare(String(a.date || ""));
       if (dateDiff !== 0) return dateDiff;
-      return Number(a.order || 0) - Number(b.order || 0);
+      const publishedDiff = String(b.publishedAt || "").localeCompare(String(a.publishedAt || ""));
+      if (publishedDiff !== 0) return publishedDiff;
+      return documentSequence(b) - documentSequence(a);
     });
+  }
+
+  function newest(items) {
+    return sortDocuments(items, "newest");
+  }
+
+  function orderedAnnouncements(items) {
+    const visible = published(items);
+    const activePinned = visible
+      .filter(isPinnedAnnouncement)
+      .sort((a, b) => {
+        const pinDiff = Number(a.pinOrder || 1) - Number(b.pinOrder || 1);
+        if (pinDiff !== 0) return pinDiff;
+        return String(b.date || "").localeCompare(String(a.date || ""));
+      })
+      .slice(0, 3)
+      .map((item) => ({ ...item, __isPinnedDisplay: true }));
+
+    const pinnedIds = new Set(activePinned.map((item) => String(item.id)));
+    const regular = visible
+      .filter((item) => !pinnedIds.has(String(item.id)))
+      .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
+      .map((item) => ({ ...item, __isPinnedDisplay: false }));
+
+    return [...activePinned, ...regular];
   }
 
   function escapeHtml(value) {
@@ -449,12 +527,14 @@ window.Egov = (() => {
         action = `<a ${linkAttributes(item.url)}>${escapeHtml(label.externalAction || "Buksan ang Kaugnay na Link ↗")}</a>`;
       }
 
+      const pinnedDisplay = section === "Announcements" && item.__isPinnedDisplay === true;
       return `
-        <article class="document-card" data-search="${escapeHtml(`${item.title} ${item.description} ${item.number} ${item.content || ""}`.toLowerCase())}">
+        <article class="document-card${pinnedDisplay ? " pinned-announcement" : ""}" data-search="${escapeHtml(`${item.title} ${item.description} ${item.number} ${item.content || ""}`.toLowerCase())}">
           ${cardMedia(item, fallbackImage, "📄")}
           <div class="document-card-body">
             <div class="document-topline">
               <span class="document-badge">${escapeHtml(label.singular)}</span>
+              ${pinnedDisplay ? `<span class="announcement-pin-badge">★ Mahalagang Anunsyo</span>` : ""}
             </div>
             <p class="document-number">${escapeHtml(item.number || label.singular)}</p>
             <h3>${escapeHtml(item.title)}</h3>
@@ -678,6 +758,9 @@ window.Egov = (() => {
     jsonp,
     published,
     newest,
+    sortDocuments,
+    orderedAnnouncements,
+    isPinnedAnnouncement,
     escapeHtml,
     safeUrl,
     imageUrl,

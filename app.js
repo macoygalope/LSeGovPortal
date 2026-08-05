@@ -36,7 +36,7 @@ function renderForms(items, settings) {
 
 function renderAnnouncements(items) {
   const grid = document.getElementById("announcementGrid");
-  const visible = Egov.newest(items).slice(0, 3);
+  const visible = Egov.orderedAnnouncements(items).slice(0, 3);
 
   if (!visible.length) {
     grid.innerHTML = `<div class="empty-state">${Egov.labels.Announcements.empty}</div>`;

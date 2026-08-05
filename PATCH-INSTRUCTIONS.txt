@@ -1,26 +1,24 @@
-LOS SANTOS eGOV V6.3 — HIDDEN MEMORANDUMS PATCH
+LOS SANTOS eGOV V6.6 PATCH
 
-LAYUNIN
-- Wala nang Mga Memorandum sa homepage.
-- Wala nang link sa Mga Memorandum sa navigation ng public pages.
-- Mananatiling gumagana ang memorandums.html bilang direct-link page.
-- Mananatili ang Mga Memorandum sa Admin Dashboard at Google Sheet.
-- Hindi maaapektuhan ang Makipagpulong kay Mayor button at Mga Anunsyo system.
+GITHUB FILES:
+- admin.html
+- admin.js
+- app.js
+- documents.js
+- shared.js
+- styles.css
+- executive-orders.html
+- memorandums.html
+- resolutions.html
 
-PAG-INSTALL SA GITHUB
-1. I-extract ang patch ZIP.
-2. Sa GitHub repository, piliin ang Add file > Upload files.
-3. I-upload ang lahat ng files mula sa patch.
-4. Payagang palitan ang existing files.
-5. Pindutin ang Commit changes.
-6. Maghintay ng ilang minuto, pagkatapos ay Ctrl + Shift + R.
+GOOGLE APPS SCRIPT:
+- google-apps-script/Code.gs
 
-WALANG KAILANGANG BAGUHIN SA:
-- config.js
-- Google Sheet
-- Google Apps Script / Code.gs
-- Apps Script deployment
-- Admin token
+INSTALL:
+1. Upload the GitHub files and commit.
+2. Replace Code.gs in Extensions > Apps Script.
+3. Run setupSheets().
+4. Update the Web App deployment using New version.
+5. Hard refresh using Ctrl + Shift + R.
 
-DIRECT LINK NG MGA MEMORANDUM
-https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/memorandums.html
+Do not replace config.js.

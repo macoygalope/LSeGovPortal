@@ -4,10 +4,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   const section = document.body.dataset.documentSection;
   const data = await Egov.loadAll();
   const settings = Egov.applySettings(data.SiteSettings);
-  const allItems = Egov.newest(data[section]);
 
   const grid = document.getElementById("archiveGrid");
   const search = document.getElementById("archiveSearch");
+  const sortControl = document.getElementById("archiveSort");
   const pagination = document.getElementById("pagination");
   const count = document.getElementById("archiveCount");
   const pageSize = 9;
@@ -18,11 +18,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
   let currentPage = getPageFromUrl();
   let query = "";
+  let sortMode = getSortFromUrl();
+
+  if (sortControl) sortControl.value = sortMode;
+
+  function orderedItems() {
+    if (section === "Announcements") return Egov.orderedAnnouncements(data[section]);
+    return Egov.sortDocuments(data[section], sortMode);
+  }
 
   function filteredItems() {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return allItems;
-    return allItems.filter((item) =>
+    const items = orderedItems();
+    if (!normalized) return items;
+    return items.filter((item) =>
       `${item.title} ${item.description} ${item.number} ${item.content || ""}`.toLowerCase().includes(normalized)
     );
   }
@@ -68,7 +77,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const button = event.target.closest("[data-page]");
     if (!button || button.disabled) return;
     currentPage = Number(button.dataset.page);
-    setPageInUrl(currentPage);
+    setArchiveUrl(currentPage, sortMode);
     render();
     document.querySelector(".archive-toolbar").scrollIntoView({ behavior: "smooth", block: "start" });
   });
@@ -76,9 +85,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   search.addEventListener("input", () => {
     query = search.value;
     currentPage = 1;
-    setPageInUrl(1);
+    setArchiveUrl(1, sortMode);
     render();
   });
+
+  if (sortControl) {
+    sortControl.addEventListener("change", () => {
+      sortMode = sortControl.value;
+      currentPage = 1;
+      setArchiveUrl(1, sortMode);
+      render();
+    });
+  }
 
   Egov.initViewer(data, settings);
   render();
@@ -104,9 +122,19 @@ function getPageFromUrl() {
   return Number.isInteger(value) && value > 0 ? value : 1;
 }
 
-function setPageInUrl(page) {
+function getSortFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("sort") || "newest";
+  return ["newest", "oldest", "numberAsc", "numberDesc"].includes(value) ? value : "newest";
+}
+
+function setArchiveUrl(page, sortMode) {
   const url = new URL(window.location.href);
   if (page <= 1) url.searchParams.delete("page");
   else url.searchParams.set("page", String(page));
+
+  if (!sortMode || sortMode === "newest") url.searchParams.delete("sort");
+  else url.searchParams.set("sort", sortMode);
+
   history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
 }

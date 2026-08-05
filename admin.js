@@ -11,6 +11,7 @@ const SECTION_NAMES = {
 };
 
 const INTERNAL_DOCUMENT_SECTIONS = new Set(["Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"]);
+const AUTO_NUMBER_SECTIONS = new Set(["ExecutiveOrders", "Memorandums", "Resolutions"]);
 const CONTENT_CHUNK_SIZE = 1050;
 
 let activeSection = "Forms";
@@ -194,18 +195,21 @@ function configureEntryFields() {
   const isForm = activeSection === "Forms";
   const isAnnouncement = activeSection === "Announcements";
   const isMemorandum = activeSection === "Memorandums";
+  const hasAutoNumber = AUTO_NUMBER_SECTIONS.has(activeSection);
 
   document.getElementById("contentFieldGroup").classList.toggle("hidden", !hasInternalPage);
   document.getElementById("memorandumFieldsGroup").classList.toggle("hidden", !isMemorandum);
   document.getElementById("titleFieldGroup").classList.toggle("hidden", isMemorandum);
+  document.getElementById("autoNumberFields").classList.toggle("hidden", !hasAutoNumber);
+  document.getElementById("announcementPinFields").classList.toggle("hidden", !isAnnouncement);
   document.getElementById("numberInput").closest("label").classList.toggle("field-muted", isForm);
 
   document.getElementById("titleInput").required = !isMemorandum;
   document.getElementById("memoSubjectInput").required = isMemorandum;
   document.getElementById("memoToInput").required = isMemorandum;
   document.getElementById("memoFromInput").required = isMemorandum;
-  document.getElementById("numberInput").required = isMemorandum;
-  document.getElementById("dateInput").required = isMemorandum;
+  document.getElementById("numberInput").required = false;
+  document.getElementById("dateInput").required = isMemorandum || hasAutoNumber;
 
   document.getElementById("contentFieldLabel").textContent = isAnnouncement
     ? "Buong Nilalaman ng Anunsyo"
@@ -225,24 +229,49 @@ function configureEntryFields() {
   document.getElementById("numberInput").placeholder = isAnnouncement
     ? "Hal. Proyekto, Programa, Kaganapan, o Advisory"
     : isMemorandum
-      ? "Hal. Memorandum Blg. 2026-02"
+      ? "Awtomatikong itatalaga sa pag-publish"
       : isForm
         ? "Hindi kailangan para sa form"
-        : "Hal. Executive Order Blg. 07, Serye ng 2026";
+        : "Awtomatikong itatalaga sa pag-publish";
 
   document.getElementById("urlInput").required = isForm;
   document.getElementById("urlRequirementText").textContent = isForm
     ? "(kailangan para sa mga form)"
     : "(opsyonal)";
   document.getElementById("urlHelpText").textContent = isForm
-    ? "Ilagay ang opisyal na Google Form link."
+    ? "Ilagay ang Google Form link."
     : isAnnouncement
-      ? "Opsyonal na link para sa registration form, pahina ng kaganapan, album ng larawan, o karagdagang detalye."
-      : isMemorandum
-        ? "Opsyonal na link para sa nilagdaang PDF o restricted Google Drive file."
-        : hasInternalPage
-          ? "Opsyonal na link para sa nilagdaang PDF o Google Drive file."
-          : "Opsyonal na link para sa karagdagang detalye.";
+      ? "Opsyonal na registration link, event page, photo album, o karagdagang detalye."
+      : "Opsyonal na link sa signed PDF, Google Drive file, o opisyal na kopya.";
+
+  syncNumberingInputState();
+  syncPinFieldsState();
+}
+
+function syncNumberingInputState() {
+  const input = document.getElementById("numberInput");
+  const autoCheckbox = document.getElementById("autoNumberInput");
+  const hasAutoNumber = AUTO_NUMBER_SECTIONS.has(activeSection);
+
+  if (!hasAutoNumber) {
+    input.readOnly = activeSection === "Forms";
+    return;
+  }
+
+  input.readOnly = autoCheckbox.checked;
+  input.classList.toggle("auto-number-readonly", autoCheckbox.checked);
+  document.getElementById("autoNumberHelp").textContent = autoCheckbox.checked
+    ? (input.value
+        ? "Naitalaga na ang numerong ito at hindi na awtomatikong babaguhin."
+        : "Itatalaga ang kasunod na numero kapag unang inilathala ang entry.")
+    : "Manual override: ilagay ang kumpletong numero bago i-publish.";
+}
+
+function syncPinFieldsState() {
+  const enabled = activeSection === "Announcements" && document.getElementById("pinnedInput").checked;
+  document.querySelectorAll(".pin-detail-fields input").forEach((input) => {
+    input.disabled = !enabled;
+  });
 }
 
 async function loadRecords() {
@@ -259,6 +288,14 @@ async function loadRecords() {
   } catch (error) {
     recordsList.innerHTML = `<div class="error-state">${escapeHtml(error.message)}</div>`;
   }
+}
+
+function isActivePinnedAnnouncement(item) {
+  if (!(item.pinned === true || String(item.pinned).toLowerCase() === "true")) return false;
+  if (!item.pinExpires) return true;
+  const today = new Date();
+  const localToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  return String(item.pinExpires) >= localToday;
 }
 
 function renderRecords() {
@@ -278,6 +315,7 @@ function renderRecords() {
     <article class="record-item">
       <div class="record-summary">
         ${item.image ? `<span class="record-image-indicator">May larawan</span>` : ""}
+        ${activeSection === "Announcements" && isActivePinnedAnnouncement(item) ? `<span class="record-pin-indicator">★ Naka-pin</span>` : ""}
         <h3>
           ${escapeHtml(item.title)}
           <span class="record-status ${String(item.published).toLowerCase() === "true" ? "" : "draft"}">
@@ -306,6 +344,10 @@ function resetForm() {
   document.getElementById("entryId").value = "";
   document.getElementById("orderInput").value = "0";
   document.getElementById("publishedInput").checked = true;
+  document.getElementById("autoNumberInput").checked = AUTO_NUMBER_SECTIONS.has(activeSection);
+  document.getElementById("pinnedInput").checked = false;
+  document.getElementById("pinOrderInput").value = "1";
+  document.getElementById("pinExpiresInput").value = "";
   document.getElementById("editorTitle").textContent = "Magdagdag ng Bagong Entry";
   document.getElementById("cancelEditButton").classList.add("hidden");
   document.getElementById("saveButton").textContent = "I-save ang Entry";
@@ -328,6 +370,10 @@ function editRecord(id) {
   document.getElementById("contentInput").value = item.content || "";
   document.getElementById("numberInput").value = item.number || "";
   document.getElementById("dateInput").value = item.date || "";
+  document.getElementById("autoNumberInput").checked = String(item.autoNumber).toLowerCase() === "true";
+  document.getElementById("pinnedInput").checked = String(item.pinned).toLowerCase() === "true";
+  document.getElementById("pinOrderInput").value = item.pinOrder || 1;
+  document.getElementById("pinExpiresInput").value = item.pinExpires || "";
   document.getElementById("imageInput").value = item.image || "";
   document.getElementById("urlInput").value = item.url === "#" ? "" : (item.url || "");
   document.getElementById("iconInput").value = item.icon || "";
@@ -337,6 +383,7 @@ function editRecord(id) {
   document.getElementById("editorTitle").textContent = "I-edit ang Entry";
   document.getElementById("cancelEditButton").classList.remove("hidden");
   document.getElementById("saveButton").textContent = "I-update ang Entry";
+  configureEntryFields();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -391,7 +438,16 @@ async function saveRecord(event) {
   }
 
   const isMemorandum = activeSection === "Memorandums";
+  const hasAutoNumber = AUTO_NUMBER_SECTIONS.has(activeSection);
+  const autoNumber = hasAutoNumber && document.getElementById("autoNumberInput").checked;
+  const requestedPublished = document.getElementById("publishedInput").checked;
+  const manualNumber = document.getElementById("numberInput").value.trim();
   const memorandumSubject = document.getElementById("memoSubjectInput").value.trim();
+
+  if (hasAutoNumber && requestedPublished && !autoNumber && !manualNumber) {
+    showToast("Maglagay ng manual na numero o piliin ang awtomatikong numbering.");
+    return;
+  }
 
   const payload = {
     id: document.getElementById("entryId").value.trim(),
@@ -403,8 +459,12 @@ async function saveRecord(event) {
     signatureImage: document.getElementById("memoSignatureInput").value.trim(),
     signatoryName: document.getElementById("memoSignatoryNameInput").value.trim(),
     signatoryPosition: document.getElementById("memoSignatoryPositionInput").value.trim(),
-    number: document.getElementById("numberInput").value.trim(),
+    number: manualNumber,
     date: document.getElementById("dateInput").value,
+    autoNumber: autoNumber ? "true" : "false",
+    pinned: document.getElementById("pinnedInput").checked ? "true" : "false",
+    pinOrder: document.getElementById("pinOrderInput").value || "1",
+    pinExpires: document.getElementById("pinExpiresInput").value,
     image: document.getElementById("imageInput").value.trim(),
     url: document.getElementById("urlInput").value.trim(),
     icon: document.getElementById("iconInput").value.trim(),
@@ -425,14 +485,15 @@ async function saveRecord(event) {
     }
 
     button.textContent = "Sine-save…";
-    await jsonp({
+    const result = await jsonp({
       action: "upsert",
       section: activeSection,
       uploadId,
       payload: JSON.stringify(payload)
     }, 35000);
 
-    showToast(payload.id ? "Na-update na ang entry." : "Nagawa na ang bagong entry.");
+    const assignedNumber = result.data && result.data.number ? ` ${result.data.number}` : "";
+    showToast(payload.id ? `Na-update na ang entry.${assignedNumber}` : `Nagawa na ang bagong entry.${assignedNumber}`);
     resetForm();
     await loadRecords();
   } catch (error) {
@@ -548,6 +609,9 @@ document.querySelectorAll(".admin-tab").forEach((button) => {
 document.querySelectorAll("[data-document-format]").forEach((button) => {
   button.addEventListener("click", () => applyDocumentFormatting(button.dataset.documentFormat));
 });
+
+document.getElementById("autoNumberInput").addEventListener("change", syncNumberingInputState);
+document.getElementById("pinnedInput").addEventListener("change", syncPinFieldsState);
 
 document.getElementById("contentInput").addEventListener("keydown", (event) => {
   if (!(event.ctrlKey || event.metaKey)) return;
