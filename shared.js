@@ -68,6 +68,10 @@ const EGOV_FALLBACK = {
     meetingButtonLabel: "Makipagpulong kay Mayor",
     meetingUrl: "",
     defaultDocumentImageUrl: "",
+    defaultMemorandumWatermarkUrl: "",
+    defaultSignatureImageUrl: "",
+    defaultSignatoryName: "Alejandro Tagalog",
+    defaultSignatoryPosition: "Alkalde ng Lungsod ng Los Santos",
     footerText: "© Pamahalaang Panglungsod ng Los Santos. Lahat ng karapatan ay nakalaan."
   },
   Forms: [
@@ -109,16 +113,23 @@ const EGOV_FALLBACK = {
   Memorandums: [
     {
       id: "memo-1",
-      title: "Halimbawang Memorandum",
-      description: "Isang halimbawa ng memorandum na mababasa nang buo sa loob ng website.",
-      number: "Memorandum Blg. 01, Serye ng 2026",
+      title: "Pagsusumite ng Ulat ng mga Tanggapan",
+      subject: "Pagsusumite ng Ulat ng mga Tanggapan",
+      memoTo: "Mga Hepe at Kinatawan ng mga Ahensiya ng Pamahalaang Panglungsod",
+      memoFrom: "Tanggapan ng Alkalde",
+      watermarkImage: "",
+      signatureImage: "",
+      signatoryName: "Alejandro Tagalog",
+      signatoryPosition: "Alkalde ng Lungsod ng Los Santos",
+      description: "Halimbawang pormal na memorandum para sa mga tanggapan ng Pamahalaang Panglungsod.",
+      number: "Memorandum Blg. 2026-01",
       date: "2026-01-02",
       url: "",
       icon: "📄",
       image: "",
       order: 1,
       published: true,
-      content: "MEMORANDUM BLG. 01\nSerye ng 2026\n\nPAKSA: HALIMBAWANG MEMORANDUM PARA SA PAMAHALAANG PANGLUNGSOD\n\nIpinababatid sa lahat ng kinauukulan na ang dokumentong ito ay halimbawa ng memorandum na maaaring ilagay at basahin sa loob mismo ng Los Santos eGov.\n\nAng lahat ng tanggapan ay inaasahang makikipagtulungan sa maayos na pagpapatupad ng mga tagubiling nakasaad dito."
+      content: "Alinsunod sa layunin ng Pamahalaang Panglungsod na mapanatili ang maayos na koordinasyon sa pagitan ng mga tanggapan, ang lahat ng kinauukulang ahensiya ay inaasahang magsumite ng kanilang opisyal na ulat sa itinakdang panahon.\n\nAng ulat ay kinakailangang maglaman ng mga sumusunod:\n\n- Buod ng mga isinagawang aktibidad;\n- Mga suliraning kinaharap ng tanggapan;\n- Mga mungkahi at rekomendasyon; at\n- Mga susunod na hakbang para sa mas maayos na serbisyo.\n\nMahigpit na ipatutupad ang tagubiling ito para sa kapakanan ng buong lungsod."
     }
   ],
   Resolutions: [
@@ -431,7 +442,9 @@ window.Egov = (() => {
       const hasExternal = safeUrl(item.url) !== "#";
       let action = `<span class="no-file">${escapeHtml(label.noContent || "Wala pang buong nilalaman")}</span>`;
 
-      if (hasInternal) {
+      if (hasInternal && section === "Memorandums") {
+        action = `<a class="document-open-button" href="memorandum.html?id=${encodeURIComponent(item.id)}">${escapeHtml(label.readAction || "Basahin ang Buong Dokumento →")}</a>`;
+      } else if (hasInternal) {
         action = `<button class="document-open-button" type="button" data-open-document data-section="${escapeHtml(section)}" data-id="${escapeHtml(item.id)}">${escapeHtml(label.readAction || "Basahin ang Buong Dokumento →")}</button>`;
       } else if (hasExternal) {
         action = `<a ${linkAttributes(item.url)}>${escapeHtml(label.externalAction || "Buksan ang Kaugnay na Link ↗")}</a>`;

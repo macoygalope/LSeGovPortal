@@ -69,10 +69,60 @@
             <form id="entryForm" class="entry-form">
               <input type="hidden" id="entryId" />
 
-              <label>
+              <label id="titleFieldGroup">
                 Pamagat
                 <input id="titleInput" type="text" maxlength="180" required />
               </label>
+
+              <section id="memorandumFieldsGroup" class="memorandum-admin-fields hidden" aria-labelledby="memorandumFieldsTitle">
+                <div class="admin-subsection-heading">
+                  <div>
+                    <span class="eyebrow">Pormal na Template</span>
+                    <h3 id="memorandumFieldsTitle">Detalye ng Memorandum</h3>
+                  </div>
+                  <p>Ang paksa ang awtomatikong gagamiting pamagat ng card at ng pormal na memorandum page.</p>
+                </div>
+
+                <label>
+                  Paksa
+                  <textarea id="memoSubjectInput" rows="3" maxlength="500" placeholder="Hal. Pagsasagawa ng Pagsusuri at Rekomendasyon sa mga Pampublikong Lugar"></textarea>
+                </label>
+
+                <div class="form-row">
+                  <label>
+                    Para Sa
+                    <textarea id="memoToInput" rows="3" maxlength="500" placeholder="Hal. Hepe ng Los Santos Police Department (LSPD)"></textarea>
+                  </label>
+                  <label>
+                    Mula Kay
+                    <textarea id="memoFromInput" rows="3" maxlength="500" placeholder="Hal. Tanggapan ng Alkalde"></textarea>
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    Watermark ng Memorandum
+                    <input id="memoWatermarkInput" type="url" placeholder="Public image URL o Google Drive share link" />
+                    <span class="field-help">Opsyonal. Kapag blangko, gagamitin ang default watermark sa Mga Larawan at Ayos.</span>
+                  </label>
+                  <label>
+                    Larawan ng Lagda
+                    <input id="memoSignatureInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
+                    <span class="field-help">Mas mainam ang transparent PNG na lagda.</span>
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    Pangalan ng Lumagda
+                    <input id="memoSignatoryNameInput" type="text" maxlength="160" placeholder="Hal. Alejandro Tagalog" />
+                  </label>
+                  <label>
+                    Posisyon ng Lumagda
+                    <input id="memoSignatoryPositionInput" type="text" maxlength="180" placeholder="Hal. Alkalde ng Lungsod ng Los Santos" />
+                  </label>
+                </div>
+              </section>
 
               <label>
                 Maikling Paglalarawan
@@ -226,6 +276,38 @@
                 Pangalan ng Punong Lungsod
                 <input id="mayorNameInput" type="text" maxlength="120" />
               </label>
+
+              <section class="memorandum-default-settings" aria-labelledby="memorandumDefaultsTitle">
+                <div class="admin-subsection-heading">
+                  <div>
+                    <span class="eyebrow">Default na Memorandum</span>
+                    <h3 id="memorandumDefaultsTitle">Watermark at Lagda</h3>
+                  </div>
+                  <p>Gagamitin ang mga ito kapag walang sariling watermark o lumagda ang isang memorandum.</p>
+                </div>
+
+                <div class="settings-image-grid">
+                  <label>
+                    Default na Watermark ng Memorandum
+                    <input id="defaultMemorandumWatermarkUrlInput" type="url" placeholder="Public image URL o Google Drive share link" />
+                  </label>
+                  <label>
+                    Default na Larawan ng Lagda
+                    <input id="defaultSignatureImageUrlInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    Default na Pangalan ng Lumagda
+                    <input id="defaultSignatoryNameInput" type="text" maxlength="160" placeholder="Alejandro Tagalog" />
+                  </label>
+                  <label>
+                    Default na Posisyon ng Lumagda
+                    <input id="defaultSignatoryPositionInput" type="text" maxlength="180" placeholder="Alkalde ng Lungsod ng Los Santos" />
+                  </label>
+                </div>
+              </section>
 
               <div class="form-row">
                 <label>

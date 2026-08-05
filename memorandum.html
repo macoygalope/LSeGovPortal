@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fil">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="description" content="Pormal na memorandum ng Pamahalaang Panglungsod ng Los Santos." />
+  <title>Memorandum — Los Santos eGov</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="memorandum-detail-body">
+  <div class="top-strip"></div>
+  <header class="site-header memorandum-site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="Los Santos eGov">
+        <span class="brand-seal" data-logo-holder aria-hidden="true">LS</span>
+        <span>
+          <strong data-site-title>Los Santos eGov</strong>
+          <small data-site-subtitle>Opisyal na Portal ng Serbisyong Digital</small>
+        </span>
+      </a>
+      <button class="menu-button" id="menuButton" type="button" aria-label="Buksan ang menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="site-nav" id="siteNav">
+        <a href="index.html#forms">Mga Form</a>
+        <a href="announcements.html">Mga Anunsyo</a>
+        <a href="executive-orders.html">Executive Orders</a>
+        <a href="resolutions.html">Mga Resolusyon</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="memorandum-detail-main">
+    <div class="container memorandum-toolbar" id="memorandumToolbar">
+      <a class="button button-secondary button-small" href="memorandums.html">← Bumalik sa mga Memorandum</a>
+      <div class="memorandum-toolbar-actions">
+        <a class="button button-secondary button-small hidden" id="memorandumExternalLink" target="_blank" rel="noopener noreferrer">Buksan ang Nilagdaang Kopya ↗</a>
+        <button class="button button-primary button-small" id="printMemorandumButton" type="button">I-print ang Memorandum</button>
+      </div>
+    </div>
+
+    <section class="container memorandum-loading" id="memorandumLoading">
+      <div class="loading-card">Kinukuha ang memorandum…</div>
+    </section>
+
+    <section class="memorandum-paper-stage hidden" id="memorandumPaperStage">
+      <article class="memorandum-sheet" id="memorandumSheet">
+        <img class="memorandum-watermark hidden" id="memorandumWatermark" alt="" />
+        <div class="memorandum-sheet-content">
+          <h1 class="memorandum-number" id="memorandumNumber">MEMORANDUM</h1>
+
+          <div class="memorandum-meta" aria-label="Detalye ng memorandum">
+            <div class="memorandum-meta-row">
+              <span class="memorandum-meta-label">PARA SA</span><span class="memorandum-meta-colon">:</span><strong id="memorandumTo">—</strong>
+            </div>
+            <div class="memorandum-meta-row">
+              <span class="memorandum-meta-label">MULA KAY</span><span class="memorandum-meta-colon">:</span><strong id="memorandumFrom">—</strong>
+            </div>
+            <div class="memorandum-meta-row">
+              <span class="memorandum-meta-label">PAKSA</span><span class="memorandum-meta-colon">:</span><strong id="memorandumSubject">—</strong>
+            </div>
+            <div class="memorandum-meta-row">
+              <span class="memorandum-meta-label">PETSA</span><span class="memorandum-meta-colon">:</span><strong id="memorandumDate">—</strong>
+            </div>
+          </div>
+
+          <div class="memorandum-body official-document-body" id="memorandumContent"></div>
+
+          <div class="memorandum-signature-block" id="memorandumSignatureBlock">
+            <img class="memorandum-signature-image hidden" id="memorandumSignatureImage" alt="Lagda" />
+            <strong class="memorandum-signatory-name" id="memorandumSignatoryName"></strong>
+            <span class="memorandum-signatory-position" id="memorandumSignatoryPosition"></span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="container hidden" id="memorandumError">
+      <div class="error-state">Hindi makita ang memorandum na iyong hinahanap.</div>
+    </section>
+  </main>
+
+  <footer class="site-footer memorandum-page-footer">
+    <div class="container footer-inner">
+      <div class="brand footer-brand">
+        <span class="brand-seal" data-logo-holder aria-hidden="true">LS</span>
+        <span><strong data-site-title>Los Santos eGov</strong><small data-site-subtitle>Opisyal na Portal ng Serbisyong Digital</small></span>
+      </div>
+      <p><span data-footer-text>© Pamahalaang Panglungsod ng Los Santos. Lahat ng karapatan ay nakalaan.</span></p>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="config.js"></script>
+  <script src="shared.js"></script>
+  <script src="memorandum.js"></script>
+</body>
+</html>

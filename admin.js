@@ -193,23 +193,42 @@ function configureEntryFields() {
   const hasInternalPage = INTERNAL_DOCUMENT_SECTIONS.has(activeSection);
   const isForm = activeSection === "Forms";
   const isAnnouncement = activeSection === "Announcements";
+  const isMemorandum = activeSection === "Memorandums";
 
   document.getElementById("contentFieldGroup").classList.toggle("hidden", !hasInternalPage);
+  document.getElementById("memorandumFieldsGroup").classList.toggle("hidden", !isMemorandum);
+  document.getElementById("titleFieldGroup").classList.toggle("hidden", isMemorandum);
   document.getElementById("numberInput").closest("label").classList.toggle("field-muted", isForm);
+
+  document.getElementById("titleInput").required = !isMemorandum;
+  document.getElementById("memoSubjectInput").required = isMemorandum;
+  document.getElementById("memoToInput").required = isMemorandum;
+  document.getElementById("memoFromInput").required = isMemorandum;
+  document.getElementById("numberInput").required = isMemorandum;
+  document.getElementById("dateInput").required = isMemorandum;
+
   document.getElementById("contentFieldLabel").textContent = isAnnouncement
     ? "Buong Nilalaman ng Anunsyo"
-    : "Buong Nilalaman ng Dokumento";
+    : isMemorandum
+      ? "Nilalaman ng Memorandum"
+      : "Buong Nilalaman ng Dokumento";
   document.getElementById("contentInput").placeholder = isAnnouncement
     ? "Isulat dito ang buong detalye ng proyekto, programa, kaganapan, o opisyal na pabatid. Maaari mong gamitin ang formatting buttons sa itaas."
-    : "I-paste o isulat dito ang buong dokumento. Piliin ang teksto at gamitin ang formatting buttons sa itaas.";
+    : isMemorandum
+      ? "Isulat dito ang katawan ng memorandum. Huwag nang ulitin ang PARA SA, MULA KAY, PAKSA, PETSA, o lagda dahil awtomatiko silang ilalagay sa pormal na template."
+      : "I-paste o isulat dito ang buong dokumento. Piliin ang teksto at gamitin ang formatting buttons sa itaas.";
   document.getElementById("numberFieldLabel").textContent = isAnnouncement
     ? "Uri o Sanggunian (opsyonal)"
-    : "Numero o Sanggunian";
+    : isMemorandum
+      ? "Numero ng Memorandum"
+      : "Numero o Sanggunian";
   document.getElementById("numberInput").placeholder = isAnnouncement
     ? "Hal. Proyekto, Programa, Kaganapan, o Advisory"
-    : isForm
-      ? "Hindi kailangan para sa form"
-      : "Hal. Executive Order Blg. 07, Serye ng 2026";
+    : isMemorandum
+      ? "Hal. Memorandum Blg. 2026-02"
+      : isForm
+        ? "Hindi kailangan para sa form"
+        : "Hal. Executive Order Blg. 07, Serye ng 2026";
 
   document.getElementById("urlInput").required = isForm;
   document.getElementById("urlRequirementText").textContent = isForm
@@ -219,9 +238,11 @@ function configureEntryFields() {
     ? "Ilagay ang opisyal na Google Form link."
     : isAnnouncement
       ? "Opsyonal na link para sa registration form, pahina ng kaganapan, album ng larawan, o karagdagang detalye."
-      : hasInternalPage
-        ? "Opsyonal na link para sa nilagdaang PDF o Google Drive file."
-        : "Opsyonal na link para sa karagdagang detalye.";
+      : isMemorandum
+        ? "Opsyonal na link para sa nilagdaang PDF o restricted Google Drive file."
+        : hasInternalPage
+          ? "Opsyonal na link para sa nilagdaang PDF o Google Drive file."
+          : "Opsyonal na link para sa karagdagang detalye.";
 }
 
 async function loadRecords() {
@@ -297,6 +318,13 @@ function editRecord(id) {
 
   document.getElementById("entryId").value = item.id || "";
   document.getElementById("titleInput").value = item.title || "";
+  document.getElementById("memoSubjectInput").value = item.subject || item.title || "";
+  document.getElementById("memoToInput").value = item.memoTo || "";
+  document.getElementById("memoFromInput").value = item.memoFrom || "";
+  document.getElementById("memoWatermarkInput").value = item.watermarkImage || "";
+  document.getElementById("memoSignatureInput").value = item.signatureImage || "";
+  document.getElementById("memoSignatoryNameInput").value = item.signatoryName || "";
+  document.getElementById("memoSignatoryPositionInput").value = item.signatoryPosition || "";
   document.getElementById("descriptionInput").value = item.description || "";
   document.getElementById("contentInput").value = item.content || "";
   document.getElementById("numberInput").value = item.number || "";
@@ -363,10 +391,20 @@ async function saveRecord(event) {
     return;
   }
 
+  const isMemorandum = activeSection === "Memorandums";
+  const memorandumSubject = document.getElementById("memoSubjectInput").value.trim();
+
   const payload = {
     id: document.getElementById("entryId").value.trim(),
-    title: document.getElementById("titleInput").value.trim(),
+    title: isMemorandum ? memorandumSubject : document.getElementById("titleInput").value.trim(),
     description: document.getElementById("descriptionInput").value.trim(),
+    subject: memorandumSubject,
+    memoTo: document.getElementById("memoToInput").value.trim(),
+    memoFrom: document.getElementById("memoFromInput").value.trim(),
+    watermarkImage: document.getElementById("memoWatermarkInput").value.trim(),
+    signatureImage: document.getElementById("memoSignatureInput").value.trim(),
+    signatoryName: document.getElementById("memoSignatoryNameInput").value.trim(),
+    signatoryPosition: document.getElementById("memoSignatoryPositionInput").value.trim(),
     number: document.getElementById("numberInput").value.trim(),
     date: document.getElementById("dateInput").value,
     image: document.getElementById("imageInput").value.trim(),
@@ -419,6 +457,10 @@ async function loadSettings() {
     document.getElementById("mayorImageUrlInput").value = settings.mayorImageUrl || "";
     document.getElementById("heroImageUrlInput").value = settings.heroImageUrl || "";
     document.getElementById("defaultDocumentImageUrlInput").value = settings.defaultDocumentImageUrl || "";
+    document.getElementById("defaultMemorandumWatermarkUrlInput").value = settings.defaultMemorandumWatermarkUrl || "";
+    document.getElementById("defaultSignatureImageUrlInput").value = settings.defaultSignatureImageUrl || "";
+    document.getElementById("defaultSignatoryNameInput").value = settings.defaultSignatoryName || settings.mayorName || "";
+    document.getElementById("defaultSignatoryPositionInput").value = settings.defaultSignatoryPosition || "";
     document.getElementById("mayorNameInput").value = settings.mayorName || "";
     document.getElementById("meetingButtonLabelInput").value = settings.meetingButtonLabel || "Makipagpulong kay Mayor";
     document.getElementById("meetingUrlInput").value = settings.meetingUrl || "";
@@ -440,6 +482,10 @@ async function saveSettings(event) {
     mayorImageUrl: document.getElementById("mayorImageUrlInput").value.trim(),
     heroImageUrl: document.getElementById("heroImageUrlInput").value.trim(),
     defaultDocumentImageUrl: document.getElementById("defaultDocumentImageUrlInput").value.trim(),
+    defaultMemorandumWatermarkUrl: document.getElementById("defaultMemorandumWatermarkUrlInput").value.trim(),
+    defaultSignatureImageUrl: document.getElementById("defaultSignatureImageUrlInput").value.trim(),
+    defaultSignatoryName: document.getElementById("defaultSignatoryNameInput").value.trim(),
+    defaultSignatoryPosition: document.getElementById("defaultSignatoryPositionInput").value.trim(),
     mayorName: document.getElementById("mayorNameInput").value.trim(),
     meetingButtonLabel: document.getElementById("meetingButtonLabelInput").value.trim(),
     meetingUrl: document.getElementById("meetingUrlInput").value.trim(),
