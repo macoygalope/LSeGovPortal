@@ -1074,32 +1074,43 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
 }
 
 .memorandum-signature-block {
-  width: min(360px, 100%);
+  width: min(440px, 100%);
+  padding-top: 8px;
+  overflow: visible;
   text-align: center;
 }
 
 .memorandum-signature-image {
   display: block;
-  width: auto;
-  max-width: 280px;
-  height: 82px;
-  margin: 0 auto -13px;
+  width: min(360px, 100%);
+  max-width: none;
+  height: 120px;
+  margin: -16px auto -18px;
   object-fit: contain;
+  object-position: center bottom;
+  transform: scale(1.35);
+  transform-origin: center bottom;
 }
 
 .memorandum-signatory-name {
+  position: relative;
+  z-index: 1;
   display: block;
   color: #111827;
-  font-size: 14px;
+  font-size: 16px;
+  font-weight: 800;
   line-height: 1.25;
+  letter-spacing: 0.015em;
   text-transform: uppercase;
 }
 
 .memorandum-signatory-position {
+  position: relative;
+  z-index: 1;
   display: block;
-  margin-top: 2px;
+  margin-top: 4px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.35;
 }
 
@@ -1152,6 +1163,25 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
 
   .memorandum-document-footer {
     margin-top: 45px;
+  }
+
+  .memorandum-signature-block {
+    width: min(360px, 100%);
+  }
+
+  .memorandum-signature-image {
+    width: min(300px, 100%);
+    height: 105px;
+    margin: -10px auto -15px;
+    transform: scale(1.25);
+  }
+
+  .memorandum-signatory-name {
+    font-size: 15px;
+  }
+
+  .memorandum-signatory-position {
+    font-size: 13px;
   }
 }
 
