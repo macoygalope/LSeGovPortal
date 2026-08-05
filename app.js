@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   renderForms(data.Forms, settings);
   renderAnnouncements(data.Announcements, settings);
   renderHomepageDocuments(data.ExecutiveOrders, "ExecutiveOrders", "executiveGrid", settings);
-  renderHomepageDocuments(data.Memorandums, "Memorandums", "memorandumGrid", settings);
   renderHomepageDocuments(data.Resolutions, "Resolutions", "resolutionGrid", settings);
   renderStats(data);
 
@@ -63,6 +62,5 @@ function renderStats(data) {
   document.getElementById("formsCount").textContent = Egov.published(data.Forms).length;
   document.getElementById("announcementCount").textContent = Egov.published(data.Announcements).length;
   document.getElementById("ordersCount").textContent = Egov.published(data.ExecutiveOrders).length;
-  document.getElementById("documentsCount").textContent =
-    Egov.published(data.Memorandums).length + Egov.published(data.Resolutions).length;
+  document.getElementById("documentsCount").textContent = Egov.published(data.Resolutions).length;
 }
