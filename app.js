@@ -36,36 +36,15 @@ function renderForms(items, settings) {
 }
 
 function renderAnnouncements(items) {
-  const list = document.getElementById("announcementList");
-  const visible = Egov.newest(items).slice(0, 4);
+  const grid = document.getElementById("announcementGrid");
+  const visible = Egov.newest(items).slice(0, 3);
 
   if (!visible.length) {
-    list.innerHTML = `<div class="empty-state">Wala pang anunsyong nailalathala.</div>`;
+    grid.innerHTML = `<div class="empty-state">${Egov.labels.Announcements.empty}</div>`;
     return;
   }
 
-  list.innerHTML = visible.map((item) => {
-    const parts = Egov.dateParts(item.date);
-    const image = Egov.imageUrl(item.image);
-    return `
-      <article class="announcement-card ${image ? "has-image" : ""}">
-        ${image ? `<img class="announcement-image" src="${Egov.escapeHtml(image)}" alt="" loading="lazy">` : ""}
-        <div class="announcement-date">
-          <div>
-            <strong>${parts.day}</strong>
-            <span>${parts.month} ${parts.year}</span>
-          </div>
-        </div>
-        <div class="announcement-copy">
-          <h3>${Egov.escapeHtml(item.title)}</h3>
-          <p>${Egov.escapeHtml(item.description || "")}</p>
-        </div>
-        ${Egov.safeUrl(item.url) !== "#"
-          ? `<a class="button button-secondary button-small" ${Egov.linkAttributes(item.url)}>Basahin Pa</a>`
-          : ""}
-      </article>
-    `;
-  }).join("");
+  grid.innerHTML = Egov.renderDocumentCards(visible, "Announcements", "");
 }
 
 function renderHomepageDocuments(items, section, targetId, settings) {

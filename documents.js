@@ -11,6 +11,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const pagination = document.getElementById("pagination");
   const count = document.getElementById("archiveCount");
   const pageSize = 9;
+  const sectionLabel = Egov.labels[section] || {
+    searchEmpty: "Walang record na tumutugma sa iyong paghahanap.",
+    countSingular: "record",
+    countPlural: "mga record"
+  };
   let currentPage = getPageFromUrl();
   let query = "";
 
@@ -29,10 +34,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const start = (currentPage - 1) * pageSize;
     const pageItems = filtered.slice(start, start + pageSize);
 
-    count.textContent = `${filtered.length} ${filtered.length === 1 ? "dokumento" : "mga dokumento"}`;
+    count.textContent = `${filtered.length} ${filtered.length === 1 ? sectionLabel.countSingular : sectionLabel.countPlural}`;
 
     if (!pageItems.length) {
-      grid.innerHTML = `<div class="empty-state">Walang dokumentong tumutugma sa iyong paghahanap.</div>`;
+      grid.innerHTML = `<div class="empty-state">${sectionLabel.searchEmpty}</div>`;
     } else {
       grid.innerHTML = Egov.renderDocumentCards(pageItems, section, settings.defaultDocumentImageUrl);
     }

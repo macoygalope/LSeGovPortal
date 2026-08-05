@@ -72,6 +72,14 @@ const DEFAULT_SETTINGS = {
     value: "Hon. Alejandro Tagalog",
     label: "Pangalan ng Punong Lungsod"
   },
+  meetingButtonLabel: {
+    value: "Makipagpulong kay Mayor",
+    label: "Pangalan ng Pindutan sa Pagpupulong"
+  },
+  meetingUrl: {
+    value: "",
+    label: "Google Calendar Booking Link"
+  },
   defaultDocumentImageUrl: {
     value: "",
     label: "Default na Larawan ng Dokumento"
@@ -242,13 +250,13 @@ function upsertRecord_(section, payload) {
 
   if (!title) throw new Error("Kailangan ang pamagat.");
   if (content.length > 45000) {
-    throw new Error("Hanggang 45,000 characters lamang ang buong nilalaman ng dokumento.");
+    throw new Error("Hanggang 45,000 characters lamang ang buong nilalaman.");
   }
   if (section === "Forms" && !url) {
     throw new Error("Kailangan ang Google Form link.");
   }
-  if (["ExecutiveOrders", "Memorandums", "Resolutions"].indexOf(section) >= 0 && !content && !url) {
-    throw new Error("Maglagay ng buong nilalaman o external document link.");
+  if (["Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"].indexOf(section) >= 0 && !content && !url) {
+    throw new Error("Maglagay ng buong nilalaman o external link.");
   }
 
   const sheet = getContentSheet_(section);
@@ -645,11 +653,13 @@ function seedStarterData_() {
     Announcements: [
       {
         title: "Maligayang Pagdating sa Los Santos eGov",
-        description: "Maaari nang ma-access sa portal na ito ang mga pampublikong form at opisyal na dokumento ng lungsod.",
+        description: "Maaari nang ma-access sa portal na ito ang mga anunsyo, proyekto, kaganapan, pampublikong form, at opisyal na dokumento ng lungsod.",
+        number: "Pabatid mula sa Tanggapan ng Punong Lungsod",
         date: new Date().toISOString().slice(0, 10),
         icon: "📢",
         order: 1,
-        published: true
+        published: true,
+        content: "## Maligayang Pagdating sa Los Santos eGov\n\nDito ilalathala ang mahahalagang **anunsyo**, mga kasalukuyang *proyekto*, at mga nalalapit na kaganapan ng Tanggapan ng Punong Lungsod.\n\n- Mga programa at proyekto ng lungsod\n- Mga pampublikong kaganapan\n- Mga paalala at opisyal na pabatid"
       }
     ],
 

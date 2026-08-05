@@ -2,23 +2,56 @@ const CONFIG = window.EGOV_CONFIG || {};
 const API_URL = CONFIG.API_URL || "";
 
 const EGOV_SECTIONS = ["Forms", "Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"];
-const EGOV_DOCUMENT_SECTIONS = ["ExecutiveOrders", "Memorandums", "Resolutions"];
+const EGOV_DOCUMENT_SECTIONS = ["Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"];
 
 const EGOV_LABELS = {
+  Announcements: {
+    singular: "Anunsyo",
+    plural: "Mga Anunsyo",
+    empty: "Wala pang anunsyong nailalathala.",
+    searchEmpty: "Walang anunsyong tumutugma sa iyong paghahanap.",
+    countSingular: "anunsyo",
+    countPlural: "mga anunsyo",
+    readAction: "Basahin ang Buong Anunsyo →",
+    externalAction: "Buksan ang Kaugnay na Link ↗",
+    noContent: "Wala pang buong nilalaman",
+    defaultDescription: "Basahin ang buong anunsyo para sa kumpletong detalye."
+  },
   ExecutiveOrders: {
     singular: "Executive Order",
     plural: "Executive Orders",
-    empty: "Wala pang Executive Order na nailalathala."
+    empty: "Wala pang Executive Order na nailalathala.",
+    searchEmpty: "Walang Executive Order na tumutugma sa iyong paghahanap.",
+    countSingular: "dokumento",
+    countPlural: "mga dokumento",
+    readAction: "Basahin ang Buong Dokumento →",
+    externalAction: "Buksan ang Nilagdaang Kopya ↗",
+    noContent: "Wala pang buong nilalaman",
+    defaultDescription: "Basahin ang buong dokumento para sa kumpletong detalye."
   },
   Memorandums: {
     singular: "Memorandum",
     plural: "Mga Memorandum",
-    empty: "Wala pang memorandum na nailalathala."
+    empty: "Wala pang memorandum na nailalathala.",
+    searchEmpty: "Walang memorandum na tumutugma sa iyong paghahanap.",
+    countSingular: "dokumento",
+    countPlural: "mga dokumento",
+    readAction: "Basahin ang Buong Dokumento →",
+    externalAction: "Buksan ang Nilagdaang Kopya ↗",
+    noContent: "Wala pang buong nilalaman",
+    defaultDescription: "Basahin ang buong dokumento para sa kumpletong detalye."
   },
   Resolutions: {
     singular: "Resolusyon",
     plural: "Mga Resolusyon",
-    empty: "Wala pang resolusyon na nailalathala."
+    empty: "Wala pang resolusyon na nailalathala.",
+    searchEmpty: "Walang resolusyong tumutugma sa iyong paghahanap.",
+    countSingular: "dokumento",
+    countPlural: "mga dokumento",
+    readAction: "Basahin ang Buong Dokumento →",
+    externalAction: "Buksan ang Nilagdaang Kopya ↗",
+    noContent: "Wala pang buong nilalaman",
+    defaultDescription: "Basahin ang buong dokumento para sa kumpletong detalye."
   }
 };
 
@@ -32,6 +65,8 @@ const EGOV_FALLBACK = {
     logoUrl: "",
     mayorImageUrl: "",
     mayorName: "Hon. Alejandro Tagalog",
+    meetingButtonLabel: "Makipagpulong kay Mayor",
+    meetingUrl: "",
     defaultDocumentImageUrl: "",
     footerText: "© Pamahalaang Panglungsod ng Los Santos. Lahat ng karapatan ay nakalaan."
   },
@@ -45,13 +80,15 @@ const EGOV_FALLBACK = {
     {
       id: "announcement-1",
       title: "Maligayang Pagdating sa Los Santos eGov",
-      description: "Maaari nang ma-access sa portal na ito ang mga pampublikong form at opisyal na dokumento ng lungsod.",
+      description: "Maaari nang ma-access sa portal na ito ang mga anunsyo, proyekto, kaganapan, pampublikong form, at opisyal na dokumento ng lungsod.",
+      number: "Pabatid mula sa Tanggapan ng Punong Lungsod",
       date: "2026-08-05",
-      url: "#",
+      url: "",
       icon: "📢",
       image: "",
       published: true,
-      order: 1
+      order: 1,
+      content: "## Maligayang Pagdating sa Los Santos eGov\n\nDito ilalathala ang mahahalagang **anunsyo**, mga kasalukuyang *proyekto*, at mga nalalapit na kaganapan ng Tanggapan ng Punong Lungsod.\n\n- Mga programa at proyekto ng lungsod\n- Mga pampublikong kaganapan\n- Mga paalala at opisyal na pabatid\n\nAbangan ang mga susunod na update mula sa Pamahalaang Panglungsod ng Los Santos."
     }
   ],
   ExecutiveOrders: [
@@ -246,50 +283,138 @@ window.Egov = (() => {
     };
   }
 
+  /**
+   * Ligtas na subset ng Markdown para sa mahahabang opisyal na dokumento.
+   * Sinusuportahan: headings, bold, italic, links, blockquote,
+   * bullet list, numbered list, at horizontal separator.
+   */
   function documentContentToHtml(content) {
-  const normalized = String(content || "")
-    .replace(/\r\n?/g, "\n")
-    .trim();
+    const normalized = String(content || "").replace(/\r\n?/g, "\n").trim();
+    if (!normalized) return `<p>Wala pang nailalathalang buong nilalaman.</p>`;
 
-  if (!normalized) {
-    return `<p>Wala pang nailalathalang buong nilalaman ng dokumentong ito.</p>`;
+    function formatInline(text) {
+      let formatted = escapeHtml(text);
+
+      // Link: [Pangalan](https://example.com)
+      formatted = formatted.replace(
+        /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        (_match, label, url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`
+      );
+
+      // ***Bold at italic*** o ___Bold at italic___
+      formatted = formatted
+        .replace(/\*\*\*([^*\n]+?)\*\*\*/g, "<strong><em>$1</em></strong>")
+        .replace(/___([^_\n]+?)___/g, "<strong><em>$1</em></strong>");
+
+      // **Bold** o __Bold__
+      formatted = formatted
+        .replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>")
+        .replace(/__([^_\n]+?)__/g, "<strong>$1</strong>");
+
+      // *Italic* o _Italic_. Iniiwasang galawin ang underscore sa gitna ng salita.
+      formatted = formatted
+        .replace(/(^|[\s([{>])\*([^*\n]+?)\*(?=$|[\s.,;:!?)}\]<>])/g, "$1<em>$2</em>")
+        .replace(/(^|[\s([{>])_([^_\n]+?)_(?=$|[\s.,;:!?)}\]<>])/g, "$1<em>$2</em>");
+
+      return formatted;
+    }
+
+    function paragraphClasses(plainText) {
+      const classes = [];
+      const comparableText = plainText.replace(/^[*_`~\s]+/, "");
+      if (/^(SEKSYON|SECTION|ARTIKULO|ARTICLE|KABANATA|CHAPTER|PAKSA|SUBJECT)\b/i.test(comparableText)) {
+        classes.push("document-section-title");
+      }
+      if (/^(SAPAGKAT|IPINASIYA|IPINAG-UUTOS|NOW, THEREFORE|WHEREAS|RESOLVED)\b/i.test(comparableText)) {
+        classes.push("document-clause");
+      }
+      return classes.length ? ` class="${classes.join(" ")}"` : "";
+    }
+
+    const lines = normalized.split("\n");
+    const html = [];
+    let paragraph = [];
+    let listType = "";
+    let listItems = [];
+
+    function flushParagraph() {
+      if (!paragraph.length) return;
+      const plain = paragraph.join("\n").trim();
+      if (plain) {
+        html.push(`<p${paragraphClasses(plain)}>${paragraph.map(formatInline).join("<br>")}</p>`);
+      }
+      paragraph = [];
+    }
+
+    function flushList() {
+      if (!listType || !listItems.length) return;
+      const tag = listType === "ordered" ? "ol" : "ul";
+      html.push(`<${tag} class="document-list">${listItems.map((item) => `<li>${formatInline(item)}</li>`).join("")}</${tag}>`);
+      listType = "";
+      listItems = [];
+    }
+
+    function startOrContinueList(type, item) {
+      flushParagraph();
+      if (listType && listType !== type) flushList();
+      listType = type;
+      listItems.push(item.trim());
+    }
+
+    lines.forEach((rawLine) => {
+      const line = rawLine.replace(/\s+$/, "");
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        flushParagraph();
+        flushList();
+        return;
+      }
+
+      const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+      if (heading) {
+        flushParagraph();
+        flushList();
+        const level = Math.min(heading[1].length + 1, 4);
+        html.push(`<h${level} class="document-markdown-heading">${formatInline(heading[2])}</h${level}>`);
+        return;
+      }
+
+      if (/^(---|___)\s*$/.test(trimmed)) {
+        flushParagraph();
+        flushList();
+        html.push(`<hr class="document-divider">`);
+        return;
+      }
+
+      const unordered = line.match(/^\s*[-+]\s+(.+)$/);
+      if (unordered) {
+        startOrContinueList("unordered", unordered[1]);
+        return;
+      }
+
+      const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+      if (ordered) {
+        startOrContinueList("ordered", ordered[1]);
+        return;
+      }
+
+      const quote = line.match(/^\s*>\s?(.*)$/);
+      if (quote) {
+        flushParagraph();
+        flushList();
+        html.push(`<blockquote class="document-quote">${formatInline(quote[1])}</blockquote>`);
+        return;
+      }
+
+      flushList();
+      paragraph.push(trimmed);
+    });
+
+    flushParagraph();
+    flushList();
+    return html.join("");
   }
-
-  function formatInlineText(text) {
-    const escaped = escapeHtml(text);
-
-    // Ang **teksto** ay magiging bold.
-    return escaped.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  }
-
-  return normalized
-    .split(/\n\s*\n/)
-    .map((block) => {
-      const plain = block.trim();
-
-      const formatted = formatInlineText(plain)
-        .replaceAll("\n", "<br>");
-
-      const isHeading =
-        /^(SEKSYON|SECTION|ARTIKULO|ARTICLE|KABANATA|CHAPTER|PAKSA|SUBJECT)\b/i.test(
-          plain
-        );
-
-      const isResolutionClause =
-        /^(SAPAGKAT|IPINASIYA|NOW, THEREFORE|WHEREAS|RESOLVED)\b/i.test(
-          plain
-        );
-
-      return `
-        <p class="${isHeading ? "document-section-title" : ""}${
-          isResolutionClause ? " document-clause" : ""
-        }">
-          ${formatted}
-        </p>
-      `;
-    })
-    .join("");
-}
 
   function cardMedia(item, fallbackImage, fallbackIcon = "📄") {
     const source = imageUrl(item.image || fallbackImage);
@@ -304,12 +429,12 @@ window.Egov = (() => {
     return items.map((item) => {
       const hasInternal = Boolean(String(item.content || "").trim());
       const hasExternal = safeUrl(item.url) !== "#";
-      let action = `<span class="no-file">Wala pang buong nilalaman</span>`;
+      let action = `<span class="no-file">${escapeHtml(label.noContent || "Wala pang buong nilalaman")}</span>`;
 
       if (hasInternal) {
-        action = `<button class="document-open-button" type="button" data-open-document data-section="${escapeHtml(section)}" data-id="${escapeHtml(item.id)}">Basahin ang Buong Dokumento →</button>`;
+        action = `<button class="document-open-button" type="button" data-open-document data-section="${escapeHtml(section)}" data-id="${escapeHtml(item.id)}">${escapeHtml(label.readAction || "Basahin ang Buong Dokumento →")}</button>`;
       } else if (hasExternal) {
-        action = `<a ${linkAttributes(item.url)}>Buksan ang Dokumento ↗</a>`;
+        action = `<a ${linkAttributes(item.url)}>${escapeHtml(label.externalAction || "Buksan ang Kaugnay na Link ↗")}</a>`;
       }
 
       return `
@@ -321,7 +446,7 @@ window.Egov = (() => {
             </div>
             <p class="document-number">${escapeHtml(item.number || label.singular)}</p>
             <h3>${escapeHtml(item.title)}</h3>
-            <p>${escapeHtml(item.description || "Basahin ang buong dokumento para sa kumpletong detalye.")}</p>
+            <p>${escapeHtml(item.description || label.defaultDescription || "Basahin ang buong nilalaman para sa kumpletong detalye.")}</p>
             <div class="document-meta">
               <span>${formatDate(item.date)}</span>
               ${action}
@@ -341,6 +466,22 @@ window.Egov = (() => {
     document.querySelectorAll("[data-hero-description]").forEach((el) => el.textContent = merged.heroDescription);
     document.querySelectorAll("[data-mayor-name]").forEach((el) => el.textContent = merged.mayorName);
     document.querySelectorAll("[data-footer-text]").forEach((el) => el.textContent = merged.footerText);
+
+    const meetingUrl = safeUrl(merged.meetingUrl);
+    const meetingLabel = String(merged.meetingButtonLabel || "Makipagpulong kay Mayor").trim() || "Makipagpulong kay Mayor";
+    document.querySelectorAll("[data-meeting-link]").forEach((link) => {
+      link.textContent = meetingLabel;
+      if (meetingUrl !== "#") {
+        link.href = meetingUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.classList.remove("hidden");
+      } else {
+        link.removeAttribute("href");
+        link.classList.add("hidden");
+      }
+    });
+
     const viewerMayor = document.getElementById("viewerMayorName");
     if (viewerMayor) viewerMayor.textContent = merged.mayorName;
 
@@ -436,6 +577,7 @@ window.Egov = (() => {
       }
 
       const externalUrl = safeUrl(item.url);
+      externalLink.textContent = label.externalAction || "Buksan ang Kaugnay na Link ↗";
       if (externalUrl !== "#") {
         externalLink.href = externalUrl;
         externalLink.classList.remove("hidden");
@@ -530,6 +672,7 @@ window.Egov = (() => {
     linkAttributes,
     formatDate,
     dateParts,
+    documentContentToHtml,
     cardMedia,
     renderDocumentCards,
     applySettings,

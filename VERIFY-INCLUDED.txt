@@ -1,0 +1,14 @@
+V6.1 FEATURE CHECKLIST
+
+[✓] Booking button sa index.html
+[✓] Booking button sa announcements.html
+[✓] Booking button sa executive-orders.html
+[✓] Booking button sa memorandums.html
+[✓] Booking button sa resolutions.html
+[✓] Booking URL at button label fields sa admin.html
+[✓] Booking settings save/load sa admin.js
+[✓] Booking rendering logic sa shared.js
+[✓] Booking button design sa styles.css
+[✓] meetingButtonLabel at meetingUrl sa Code.gs
+[✓] Mga Anunsyo archive at internal reader
+[✓] Announcement images at rich formatting

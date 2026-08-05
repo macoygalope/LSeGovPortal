@@ -1,0 +1,30 @@
+LOS SANTOS eGOV V6.1 — CONSOLIDATED PATCH
+
+Kasama sa patch na ito ang dalawang feature:
+1. Makipagpulong kay Mayor — Google Calendar booking button na editable sa backend.
+2. Mga Anunsyo — sariling archive page, internal reader, larawan, search at pagination.
+
+GITHUB
+1. I-extract ang ZIP.
+2. Sa GitHub repository: Add file > Upload files.
+3. I-upload LAHAT ng files at folders sa patch at payagang palitan ang lumang files.
+4. Commit changes.
+5. Hindi kasama ang config.js, kaya hindi mababago ang Apps Script URL mo.
+
+GOOGLE APPS SCRIPT
+1. Google Sheet > Extensions > Apps Script.
+2. Palitan ang Code.gs gamit ang google-apps-script/Code.gs mula sa patch.
+3. Save.
+4. Patakbuhin ang setupSheets().
+5. Deploy > Manage deployments > Edit > New version > Deploy.
+
+ADMIN DASHBOARD
+1. Buksan ang Mga Larawan at Ayos.
+2. Ilagay ang Google Calendar Booking Link.
+3. Opsyonal: palitan ang label na “Makipagpulong kay Mayor”.
+4. I-save ang settings.
+
+MAHALAGA
+- Nakatago ang booking button kapag blangko ang booking link.
+- Gumamit ng public Google Calendar Appointment Schedule link.
+- Pagkatapos mag-update, gamitin ang Ctrl + Shift + R sa website.

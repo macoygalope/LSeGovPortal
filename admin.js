@@ -10,7 +10,7 @@ const SECTION_NAMES = {
   Settings: "Mga Larawan at Ayos"
 };
 
-const INTERNAL_DOCUMENT_SECTIONS = new Set(["ExecutiveOrders", "Memorandums", "Resolutions"]);
+const INTERNAL_DOCUMENT_SECTIONS = new Set(["Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"]);
 const CONTENT_CHUNK_SIZE = 1050;
 
 let activeSection = "Forms";
@@ -89,6 +89,82 @@ function showToast(message) {
   showToast.timer = setTimeout(() => toast.classList.remove("show"), 4000);
 }
 
+function replaceDocumentSelection(replacement, selectFrom = null, selectTo = null) {
+  const textarea = document.getElementById("contentInput");
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const before = textarea.value.slice(0, start);
+  const after = textarea.value.slice(end);
+
+  textarea.value = `${before}${replacement}${after}`;
+  textarea.focus();
+
+  const nextStart = start + (selectFrom === null ? replacement.length : selectFrom);
+  const nextEnd = start + (selectTo === null ? nextStart - start : selectTo);
+  textarea.setSelectionRange(nextStart, nextEnd);
+  textarea.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function transformSelectedLines(transformer, fallbackText) {
+  const textarea = document.getElementById("contentInput");
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.slice(start, end);
+  const source = selected || fallbackText;
+  const transformed = source
+    .split("\n")
+    .map((line, index) => line.trim() ? transformer(line, index) : line)
+    .join("\n");
+
+  replaceDocumentSelection(transformed, 0, transformed.length);
+}
+
+function applyDocumentFormatting(command) {
+  const textarea = document.getElementById("contentInput");
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  const selected = textarea.value.slice(start, end);
+
+  if (command === "bold" || command === "italic") {
+    const marker = command === "bold" ? "**" : "*";
+    const placeholder = command === "bold" ? "makapal na teksto" : "pahilis na teksto";
+    const content = selected || placeholder;
+    const replacement = `${marker}${content}${marker}`;
+    replaceDocumentSelection(replacement, marker.length, marker.length + content.length);
+    return;
+  }
+
+  if (command === "heading") {
+    transformSelectedLines((line) => `## ${line.replace(/^#{1,3}\s+/, "")}`, "Pamagat ng Seksyon");
+    return;
+  }
+
+  if (command === "bullet") {
+    transformSelectedLines((line) => `- ${line.replace(/^\s*[-+]\s+/, "")}`, "Unang item\nIkalawang item");
+    return;
+  }
+
+  if (command === "numbered") {
+    transformSelectedLines(
+      (line, index) => `${index + 1}. ${line.replace(/^\s*\d+[.)]\s+/, "")}`,
+      "Unang item\nIkalawang item"
+    );
+    return;
+  }
+
+  if (command === "quote") {
+    transformSelectedLines((line) => `> ${line.replace(/^\s*>\s?/, "")}`, "Siping pahayag");
+    return;
+  }
+
+  if (command === "divider") {
+    const beforeNeedsBreak = start > 0 && !textarea.value.slice(0, start).endsWith("\n\n");
+    const afterNeedsBreak = end < textarea.value.length && !textarea.value.slice(end).startsWith("\n\n");
+    const replacement = `${beforeNeedsBreak ? "\n\n" : ""}---${afterNeedsBreak ? "\n\n" : ""}`;
+    replaceDocumentSelection(replacement);
+  }
+}
+
 function showDashboard() {
   loginPanel.classList.add("hidden");
   dashboard.classList.remove("hidden");
@@ -114,21 +190,38 @@ async function validateLogin() {
 }
 
 function configureEntryFields() {
-  const isDocument = INTERNAL_DOCUMENT_SECTIONS.has(activeSection);
+  const hasInternalPage = INTERNAL_DOCUMENT_SECTIONS.has(activeSection);
   const isForm = activeSection === "Forms";
   const isAnnouncement = activeSection === "Announcements";
 
-  document.getElementById("contentFieldGroup").classList.toggle("hidden", !isDocument);
-  document.getElementById("numberInput").closest("label").classList.toggle("field-muted", isForm || isAnnouncement);
+  document.getElementById("contentFieldGroup").classList.toggle("hidden", !hasInternalPage);
+  document.getElementById("numberInput").closest("label").classList.toggle("field-muted", isForm);
+  document.getElementById("contentFieldLabel").textContent = isAnnouncement
+    ? "Buong Nilalaman ng Anunsyo"
+    : "Buong Nilalaman ng Dokumento";
+  document.getElementById("contentInput").placeholder = isAnnouncement
+    ? "Isulat dito ang buong detalye ng proyekto, programa, kaganapan, o opisyal na pabatid. Maaari mong gamitin ang formatting buttons sa itaas."
+    : "I-paste o isulat dito ang buong dokumento. Piliin ang teksto at gamitin ang formatting buttons sa itaas.";
+  document.getElementById("numberFieldLabel").textContent = isAnnouncement
+    ? "Uri o Sanggunian (opsyonal)"
+    : "Numero o Sanggunian";
+  document.getElementById("numberInput").placeholder = isAnnouncement
+    ? "Hal. Proyekto, Programa, Kaganapan, o Advisory"
+    : isForm
+      ? "Hindi kailangan para sa form"
+      : "Hal. Executive Order Blg. 07, Serye ng 2026";
+
   document.getElementById("urlInput").required = isForm;
   document.getElementById("urlRequirementText").textContent = isForm
     ? "(kailangan para sa mga form)"
     : "(opsyonal)";
   document.getElementById("urlHelpText").textContent = isForm
     ? "Ilagay ang opisyal na Google Form link."
-    : isDocument
-      ? "Opsyonal na link para sa nilagdaang PDF o Google Drive file."
-      : "Opsyonal na link para sa karagdagang detalye.";
+    : isAnnouncement
+      ? "Opsyonal na link para sa registration form, pahina ng kaganapan, album ng larawan, o karagdagang detalye."
+      : hasInternalPage
+        ? "Opsyonal na link para sa nilagdaang PDF o Google Drive file."
+        : "Opsyonal na link para sa karagdagang detalye.";
 }
 
 async function loadRecords() {
@@ -261,12 +354,12 @@ async function saveRecord(event) {
 
   const content = document.getElementById("contentInput").value.trim();
   if (content.length > 45000) {
-    showToast("Masyadong mahaba ang dokumento. Hanggang 45,000 characters lamang.");
+    showToast("Masyadong mahaba ang nilalaman. Hanggang 45,000 characters lamang.");
     return;
   }
 
   if (INTERNAL_DOCUMENT_SECTIONS.has(activeSection) && !content && !document.getElementById("urlInput").value.trim()) {
-    showToast("Maglagay ng buong nilalaman o external document link.");
+    showToast("Maglagay ng buong nilalaman o external link.");
     return;
   }
 
@@ -291,7 +384,7 @@ async function saveRecord(event) {
   try {
     let uploadId = "";
     if (content) {
-      button.textContent = "Ina-upload ang dokumento…";
+      button.textContent = "Ina-upload ang nilalaman…";
       uploadId = await uploadLongContent(content);
     }
 
@@ -327,6 +420,8 @@ async function loadSettings() {
     document.getElementById("heroImageUrlInput").value = settings.heroImageUrl || "";
     document.getElementById("defaultDocumentImageUrlInput").value = settings.defaultDocumentImageUrl || "";
     document.getElementById("mayorNameInput").value = settings.mayorName || "";
+    document.getElementById("meetingButtonLabelInput").value = settings.meetingButtonLabel || "Makipagpulong kay Mayor";
+    document.getElementById("meetingUrlInput").value = settings.meetingUrl || "";
     document.getElementById("footerTextInput").value = settings.footerText || "";
   } catch (error) {
     showToast(error.message);
@@ -346,6 +441,8 @@ async function saveSettings(event) {
     heroImageUrl: document.getElementById("heroImageUrlInput").value.trim(),
     defaultDocumentImageUrl: document.getElementById("defaultDocumentImageUrlInput").value.trim(),
     mayorName: document.getElementById("mayorNameInput").value.trim(),
+    meetingButtonLabel: document.getElementById("meetingButtonLabelInput").value.trim(),
+    meetingUrl: document.getElementById("meetingUrlInput").value.trim(),
     footerText: document.getElementById("footerTextInput").value.trim()
   };
 
@@ -404,6 +501,22 @@ settingsForm.addEventListener("submit", saveSettings);
 
 document.querySelectorAll(".admin-tab").forEach((button) => {
   button.addEventListener("click", () => switchSection(button.dataset.section));
+});
+
+document.querySelectorAll("[data-document-format]").forEach((button) => {
+  button.addEventListener("click", () => applyDocumentFormatting(button.dataset.documentFormat));
+});
+
+document.getElementById("contentInput").addEventListener("keydown", (event) => {
+  if (!(event.ctrlKey || event.metaKey)) return;
+  const key = event.key.toLowerCase();
+  if (key === "b") {
+    event.preventDefault();
+    applyDocumentFormatting("bold");
+  } else if (key === "i") {
+    event.preventDefault();
+    applyDocumentFormatting("italic");
+  }
 });
 
 configureEntryFields();

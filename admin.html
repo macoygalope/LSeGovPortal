@@ -79,15 +79,43 @@
                 <textarea id="descriptionInput" rows="3" maxlength="1200" placeholder="Maikling paliwanag na makikita sa card."></textarea>
               </label>
 
-              <label id="contentFieldGroup" class="hidden">
-                Buong Nilalaman ng Dokumento
-                <textarea id="contentInput" rows="16" placeholder="I-paste dito ang buong Executive Order, Memorandum, o Resolusyon. Mag-iwan ng isang blangkong linya sa pagitan ng mga talata."></textarea>
-                <span class="field-help">Ito ang lalabas sa internal document reader ng website. Hanggang 45,000 characters.</span>
-              </label>
+              <div id="contentFieldGroup" class="document-content-field hidden">
+                <label for="contentInput" id="contentFieldLabel">Buong Nilalaman</label>
+
+                <div class="formatting-toolbar" role="toolbar" aria-label="Mga kasangkapan sa pag-format ng nilalaman">
+                  <button type="button" class="format-button format-button-bold" data-document-format="bold" title="Bold (Ctrl+B)" aria-label="Gawing bold"><strong>B</strong></button>
+                  <button type="button" class="format-button format-button-italic" data-document-format="italic" title="Italic (Ctrl+I)" aria-label="Gawing italic"><em>I</em></button>
+                  <button type="button" class="format-button" data-document-format="heading" title="Maglagay ng heading" aria-label="Heading">H2</button>
+                  <span class="formatting-divider" aria-hidden="true"></span>
+                  <button type="button" class="format-button format-button-wide" data-document-format="bullet" title="Bullet list" aria-label="Bullet list">• Listahan</button>
+                  <button type="button" class="format-button format-button-wide" data-document-format="numbered" title="Numbered list" aria-label="Numbered list">1. Bilang</button>
+                  <button type="button" class="format-button" data-document-format="quote" title="Siping pahayag" aria-label="Siping pahayag">❝</button>
+                  <button type="button" class="format-button" data-document-format="divider" title="Pahalang na linya" aria-label="Pahalang na linya">―</button>
+                </div>
+
+                <textarea id="contentInput" rows="18" maxlength="45000" spellcheck="true" placeholder="I-paste o isulat dito ang buong nilalaman. Piliin ang teksto at gamitin ang formatting buttons sa itaas."></textarea>
+
+                <div class="document-format-help">
+                  <span class="field-help">Hanggang 45,000 characters. Gumagana rin ang Ctrl+B at Ctrl+I.</span>
+                  <details>
+                    <summary>Tingnan ang gabay sa formatting</summary>
+                    <div class="format-guide-grid">
+                      <code>**Makapal**</code><span>Bold</span>
+                      <code>*Pahilis*</code><span>Italic</span>
+                      <code>***Makapal at pahilis***</code><span>Bold at italic</span>
+                      <code>## Pamagat ng Seksyon</code><span>Heading</span>
+                      <code>- Unang item</code><span>Bullet list</span>
+                      <code>1. Unang item</code><span>Numbered list</span>
+                      <code>&gt; Siping pahayag</code><span>Quote</span>
+                      <code>---</code><span>Pahalang na separator</span>
+                    </div>
+                  </details>
+                </div>
+              </div>
 
               <div class="form-row">
                 <label>
-                  Numero o Sanggunian
+                  <span id="numberFieldLabel">Numero o Sanggunian</span>
                   <input id="numberInput" type="text" maxlength="100" placeholder="Hal. Executive Order Blg. 07, Serye ng 2026" />
                 </label>
                 <label>
@@ -99,7 +127,7 @@
               <label>
                 Link ng Larawan
                 <input id="imageInput" type="url" placeholder="https://... o public Google Drive share link" />
-                <span class="field-help">Opsyonal. Gagamitin bilang card image o document cover. Dapat naka-public ang larawan.</span>
+                <span class="field-help">Opsyonal. Gagamitin bilang larawan ng card at cover ng internal page. Dapat naka-public ang larawan.</span>
               </label>
 
               <label>
@@ -198,6 +226,18 @@
                 Pangalan ng Punong Lungsod
                 <input id="mayorNameInput" type="text" maxlength="120" />
               </label>
+
+              <div class="form-row">
+                <label>
+                  Pangalan ng Pindutan sa Pagpupulong
+                  <input id="meetingButtonLabelInput" type="text" maxlength="80" placeholder="Makipagpulong kay Mayor" />
+                </label>
+                <label>
+                  Google Calendar Booking Link
+                  <input id="meetingUrlInput" type="url" placeholder="https://calendar.google.com/calendar/appointments/..." />
+                  <span class="field-help">Ilagay ang public booking page mula sa Google Calendar. Kapag blangko, hindi lalabas ang pindutan.</span>
+                </label>
+              </div>
 
               <label>
                 Teksto sa Footer
