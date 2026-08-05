@@ -215,7 +215,7 @@ function configureEntryFields() {
   document.getElementById("contentInput").placeholder = isAnnouncement
     ? "Isulat dito ang buong detalye ng proyekto, programa, kaganapan, o opisyal na pabatid. Maaari mong gamitin ang formatting buttons sa itaas."
     : isMemorandum
-      ? "Isulat dito ang katawan ng memorandum. Huwag nang ulitin ang PARA SA, MULA KAY, PAKSA, PETSA, o lagda dahil awtomatiko silang ilalagay sa pormal na template."
+      ? "Isulat dito ang katawan ng memorandum. Huwag nang ulitin ang PARA SA, MULA KAY, PAKSA, PETSA, o lagda dahil awtomatiko silang ilalagay sa internal memorandum page."
       : "I-paste o isulat dito ang buong dokumento. Piliin ang teksto at gamitin ang formatting buttons sa itaas.";
   document.getElementById("numberFieldLabel").textContent = isAnnouncement
     ? "Uri o Sanggunian (opsyonal)"
@@ -321,7 +321,6 @@ function editRecord(id) {
   document.getElementById("memoSubjectInput").value = item.subject || item.title || "";
   document.getElementById("memoToInput").value = item.memoTo || "";
   document.getElementById("memoFromInput").value = item.memoFrom || "";
-  document.getElementById("memoWatermarkInput").value = item.watermarkImage || "";
   document.getElementById("memoSignatureInput").value = item.signatureImage || "";
   document.getElementById("memoSignatoryNameInput").value = item.signatoryName || "";
   document.getElementById("memoSignatoryPositionInput").value = item.signatoryPosition || "";
@@ -401,7 +400,6 @@ async function saveRecord(event) {
     subject: memorandumSubject,
     memoTo: document.getElementById("memoToInput").value.trim(),
     memoFrom: document.getElementById("memoFromInput").value.trim(),
-    watermarkImage: document.getElementById("memoWatermarkInput").value.trim(),
     signatureImage: document.getElementById("memoSignatureInput").value.trim(),
     signatoryName: document.getElementById("memoSignatoryNameInput").value.trim(),
     signatoryPosition: document.getElementById("memoSignatoryPositionInput").value.trim(),
@@ -457,7 +455,6 @@ async function loadSettings() {
     document.getElementById("mayorImageUrlInput").value = settings.mayorImageUrl || "";
     document.getElementById("heroImageUrlInput").value = settings.heroImageUrl || "";
     document.getElementById("defaultDocumentImageUrlInput").value = settings.defaultDocumentImageUrl || "";
-    document.getElementById("defaultMemorandumWatermarkUrlInput").value = settings.defaultMemorandumWatermarkUrl || "";
     document.getElementById("defaultSignatureImageUrlInput").value = settings.defaultSignatureImageUrl || "";
     document.getElementById("defaultSignatoryNameInput").value = settings.defaultSignatoryName || settings.mayorName || "";
     document.getElementById("defaultSignatoryPositionInput").value = settings.defaultSignatoryPosition || "";
@@ -482,7 +479,6 @@ async function saveSettings(event) {
     mayorImageUrl: document.getElementById("mayorImageUrlInput").value.trim(),
     heroImageUrl: document.getElementById("heroImageUrlInput").value.trim(),
     defaultDocumentImageUrl: document.getElementById("defaultDocumentImageUrlInput").value.trim(),
-    defaultMemorandumWatermarkUrl: document.getElementById("defaultMemorandumWatermarkUrlInput").value.trim(),
     defaultSignatureImageUrl: document.getElementById("defaultSignatureImageUrlInput").value.trim(),
     defaultSignatoryName: document.getElementById("defaultSignatoryNameInput").value.trim(),
     defaultSignatoryPosition: document.getElementById("defaultSignatoryPositionInput").value.trim(),

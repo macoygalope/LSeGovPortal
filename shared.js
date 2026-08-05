@@ -68,7 +68,6 @@ const EGOV_FALLBACK = {
     meetingButtonLabel: "Makipagpulong kay Mayor",
     meetingUrl: "",
     defaultDocumentImageUrl: "",
-    defaultMemorandumWatermarkUrl: "",
     defaultSignatureImageUrl: "",
     defaultSignatoryName: "Alejandro Tagalog",
     defaultSignatoryPosition: "Alkalde ng Lungsod ng Los Santos",

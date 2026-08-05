@@ -910,8 +910,7 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   }
 }
 
-
-/* V6.4 — Pormal na template ng memorandum */
+/* V6.5 — Simplified internal memorandum reader */
 .memorandum-admin-fields,
 .memorandum-default-settings {
   display: grid;
@@ -921,7 +920,9 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   border-radius: 14px;
   background: #f8fafc;
 }
+
 .memorandum-default-settings { margin-block: 6px; }
+
 .admin-subsection-heading {
   display: flex;
   justify-content: space-between;
@@ -930,22 +931,31 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   padding-bottom: 13px;
   border-bottom: 1px solid var(--line);
 }
+
 .admin-subsection-heading h3 {
   margin: 4px 0 0;
   color: var(--navy);
   font-size: 19px;
   line-height: 1.25;
 }
+
 .admin-subsection-heading > p {
-  max-width: 440px;
+  max-width: 480px;
   margin: 0;
   color: var(--muted);
   font-size: 11px;
   font-weight: 500;
 }
 
-.memorandum-detail-body { background: #e9edf2; }
-.memorandum-detail-main { padding: 28px 0 70px; }
+.memorandum-detail-body {
+  background: var(--surface-2);
+}
+
+.memorandum-detail-main {
+  min-height: 70vh;
+  padding: 30px 0 80px;
+}
+
 .memorandum-toolbar {
   display: flex;
   justify-content: space-between;
@@ -953,152 +963,234 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   gap: 16px;
   margin-bottom: 24px;
 }
-.memorandum-toolbar-actions { display: flex; flex-wrap: wrap; gap: 9px; }
-.memorandum-loading { padding-block: 30px; }
-.memorandum-paper-stage { width: min(100% - 24px, 920px); margin-inline: auto; }
-.memorandum-sheet {
-  position: relative;
-  width: min(210mm, 100%);
-  min-height: 297mm;
+
+.memorandum-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.memorandum-loading {
+  padding-block: 30px;
+}
+
+.memorandum-reader-stage {
+  width: min(100% - 24px, 980px);
   margin-inline: auto;
-  overflow: hidden;
-  padding: 17mm 18mm 22mm;
-  background: #fff;
-  box-shadow: 0 16px 48px rgba(11,31,58,0.16);
-  color: #222;
-  font-family: "Times New Roman", Times, serif;
+  padding: 22px 0;
 }
-.memorandum-watermark {
-  position: absolute;
-  z-index: 0;
-  top: 50%;
-  left: 50%;
-  width: 69%;
-  max-height: 69%;
+
+.memorandum-document {
+  width: min(840px, 100%);
+  min-height: 0;
+  padding: 54px 64px 64px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: 0 14px 44px rgba(11, 31, 58, 0.10);
+}
+
+.memorandum-letterhead {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  margin: 0 auto 38px;
   object-fit: contain;
-  opacity: 0.075;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  user-select: none;
+  object-position: center;
 }
-.memorandum-sheet-content { position: relative; z-index: 1; }
-.memorandum-number {
-  margin: 0 0 17px;
-  color: #111;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 25px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-.memorandum-meta {
-  display: grid;
-  gap: 3px;
-  margin-bottom: 18px;
-  font-size: 15px;
-  line-height: 1.28;
-}
-.memorandum-meta-row {
-  display: grid;
-  grid-template-columns: 82px 13px minmax(0, 1fr);
-  align-items: start;
-}
-.memorandum-meta-label { white-space: nowrap; }
-.memorandum-meta-colon { text-align: center; }
-.memorandum-meta strong { font-weight: 700; white-space: pre-line; }
-.memorandum-body {
-  color: #2d2d2d;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 15px;
-  line-height: 1.42;
-}
-.memorandum-body p { margin: 0 0 18px; text-align: justify; }
-.memorandum-body .document-markdown-heading {
-  margin: 25px 0 12px;
-  color: #111;
-  font-family: "Times New Roman", Times, serif;
-  font-size: 16px !important;
-  line-height: 1.35;
-  text-transform: none;
-}
-.memorandum-body .document-list { margin: -4px 0 19px; padding-left: 22px; }
-.memorandum-body .document-list li { margin: 2px 0; padding-left: 1px; line-height: 1.35; }
-.memorandum-body .document-quote {
-  margin: 8px 0 18px;
-  padding: 0 0 0 16px;
-  border-left: 2px solid #777;
-  background: transparent;
-  color: #333;
-}
-.memorandum-body .document-divider { width: 46%; margin: 26px auto; border-top-color: #777; }
-.memorandum-signature-block {
-  width: min(330px, 80%);
-  margin-top: 52px;
-  break-inside: avoid;
-  page-break-inside: avoid;
+
+.memorandum-heading {
+  margin-bottom: 27px;
+  padding-bottom: 23px;
+  border-bottom: 2px solid var(--navy);
   text-align: center;
 }
+
+.memorandum-heading h1 {
+  margin: 9px 0 0;
+  color: #111827;
+  font-family: "Merriweather", Georgia, serif;
+  font-size: clamp(24px, 4vw, 32px);
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.memorandum-meta {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 38px;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #253247;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.memorandum-meta-row {
+  display: grid;
+  grid-template-columns: 88px 13px minmax(0, 1fr);
+  align-items: start;
+}
+
+.memorandum-meta-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.memorandum-meta-colon {
+  color: var(--muted);
+  text-align: center;
+}
+
+.memorandum-meta strong {
+  color: #172033;
+  font-weight: 700;
+  white-space: pre-line;
+}
+
+.memorandum-body {
+  color: #202632;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.9;
+}
+
+.memorandum-body p {
+  margin: 0 0 22px;
+  text-align: justify;
+}
+
+.memorandum-document-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  margin-top: 62px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+
+.memorandum-signature-block {
+  width: min(360px, 100%);
+  text-align: center;
+}
+
 .memorandum-signature-image {
   display: block;
   width: auto;
-  max-width: 270px;
-  height: 78px;
+  max-width: 280px;
+  height: 82px;
   margin: 0 auto -13px;
   object-fit: contain;
 }
+
 .memorandum-signatory-name {
   display: block;
-  color: #111;
-  font-size: 15px;
+  color: #111827;
+  font-size: 14px;
   line-height: 1.25;
   text-transform: uppercase;
 }
-.memorandum-signatory-position { display: block; color: #222; font-size: 14px; line-height: 1.3; }
+
+.memorandum-signatory-position {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
 
 @media (max-width: 680px) {
-  .admin-subsection-heading { align-items: flex-start; flex-direction: column; }
-  .memorandum-toolbar { align-items: stretch; flex-direction: column; }
-  .memorandum-toolbar-actions { display: grid; }
-  .memorandum-paper-stage { width: calc(100% - 12px); }
-  .memorandum-sheet {
-    min-height: 0;
-    padding: 36px 24px 54px;
+  .admin-subsection-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
-  .memorandum-number { font-size: 21px; }
-  .memorandum-meta { font-size: 14px; }
-  .memorandum-meta-row { grid-template-columns: 70px 11px minmax(0, 1fr); }
-  .memorandum-body { font-size: 14.5px; }
-  .memorandum-signature-block { width: min(310px, 90%); }
+
+  .memorandum-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .memorandum-toolbar-actions {
+    display: grid;
+  }
+
+  .memorandum-reader-stage {
+    width: calc(100% - 12px);
+    padding-top: 8px;
+  }
+
+  .memorandum-document {
+    padding: 36px 22px 46px;
+    border-radius: 12px;
+  }
+
+  .memorandum-letterhead {
+    max-height: 150px;
+    margin-bottom: 27px;
+  }
+
+  .memorandum-meta {
+    padding: 18px 16px;
+    font-size: 13px;
+  }
+
+  .memorandum-meta-row {
+    grid-template-columns: 72px 10px minmax(0, 1fr);
+  }
+
+  .memorandum-meta-label {
+    font-size: 10px;
+  }
+
+  .memorandum-body {
+    font-size: 15px;
+  }
+
+  .memorandum-document-footer {
+    margin-top: 45px;
+  }
 }
 
 @media print {
-  @page { size: A4; margin: 0; }
-  body.memorandum-detail-body,
-  body.memorandum-detail-body * { visibility: visible !important; }
-  body.memorandum-detail-body { background: #fff !important; }
+  body.memorandum-detail-body {
+    background: #fff !important;
+  }
+
   body.memorandum-detail-body .top-strip,
   body.memorandum-detail-body .memorandum-site-header,
   body.memorandum-detail-body .memorandum-toolbar,
   body.memorandum-detail-body .memorandum-page-footer,
   body.memorandum-detail-body .toast,
   body.memorandum-detail-body #memorandumLoading,
-  body.memorandum-detail-body #memorandumError { display: none !important; }
-  body.memorandum-detail-body .memorandum-detail-main { padding: 0; }
-  body.memorandum-detail-body .memorandum-paper-stage { width: 100%; margin: 0; }
-  body.memorandum-detail-body .memorandum-sheet {
-    width: 210mm;
-    min-height: 297mm;
-    margin: 0;
-    padding: 17mm 18mm 22mm;
-    overflow: visible;
-    box-shadow: none;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
+  body.memorandum-detail-body #memorandumError {
+    display: none !important;
   }
-  body.memorandum-detail-body .memorandum-watermark {
-    position: fixed;
-    top: 50%;
-    left: 50%;
+
+  body.memorandum-detail-body .memorandum-detail-main {
+    padding: 0;
+  }
+
+  body.memorandum-detail-body .memorandum-reader-stage {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body.memorandum-detail-body .memorandum-document {
+    width: 100%;
+    margin: 0;
+    padding: 24px 28px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  body.memorandum-detail-body .memorandum-letterhead {
+    max-height: 180px;
   }
 }
+

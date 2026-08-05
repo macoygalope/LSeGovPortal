@@ -77,10 +77,10 @@
               <section id="memorandumFieldsGroup" class="memorandum-admin-fields hidden" aria-labelledby="memorandumFieldsTitle">
                 <div class="admin-subsection-heading">
                   <div>
-                    <span class="eyebrow">Pormal na Template</span>
+                    <span class="eyebrow">Structured na Memorandum</span>
                     <h3 id="memorandumFieldsTitle">Detalye ng Memorandum</h3>
                   </div>
-                  <p>Ang paksa ang awtomatikong gagamiting pamagat ng card at ng pormal na memorandum page.</p>
+                  <p>Ang paksa ang awtomatikong gagamiting pamagat ng card at ng internal memorandum page.</p>
                 </div>
 
                 <label>
@@ -99,18 +99,11 @@
                   </label>
                 </div>
 
-                <div class="form-row">
-                  <label>
-                    Watermark ng Memorandum
-                    <input id="memoWatermarkInput" type="url" placeholder="Public image URL o Google Drive share link" />
-                    <span class="field-help">Opsyonal. Kapag blangko, gagamitin ang default watermark sa Mga Larawan at Ayos.</span>
-                  </label>
-                  <label>
-                    Larawan ng Lagda
-                    <input id="memoSignatureInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
-                    <span class="field-help">Mas mainam ang transparent PNG na lagda.</span>
-                  </label>
-                </div>
+                <label>
+                  Larawan ng Lagda
+                  <input id="memoSignatureInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
+                  <span class="field-help">Opsyonal. Mas mainam ang transparent PNG na lagda.</span>
+                </label>
 
                 <div class="form-row">
                   <label>
@@ -268,7 +261,7 @@
                 <label>
                   Default na Larawan ng Dokumento
                   <input id="defaultDocumentImageUrlInput" type="url" placeholder="Public image URL o Google Drive share link" />
-                  <span class="field-help">Gagamitin kapag walang sariling image ang dokumento.</span>
+                  <span class="field-help">Gagamitin bilang default cover ng mga dokumento at bilang letterhead ng lahat ng memorandum.</span>
                 </label>
               </div>
 
@@ -281,21 +274,15 @@
                 <div class="admin-subsection-heading">
                   <div>
                     <span class="eyebrow">Default na Memorandum</span>
-                    <h3 id="memorandumDefaultsTitle">Watermark at Lagda</h3>
+                    <h3 id="memorandumDefaultsTitle">Lagda at Lumagda</h3>
                   </div>
-                  <p>Gagamitin ang mga ito kapag walang sariling watermark o lumagda ang isang memorandum.</p>
+                  <p>Ang Default na Larawan ng Dokumento sa itaas ang nagsisilbing letterhead. Ang mga setting sa ibaba ay gagamitin kapag walang sariling lumagda ang memorandum.</p>
                 </div>
 
-                <div class="settings-image-grid">
-                  <label>
-                    Default na Watermark ng Memorandum
-                    <input id="defaultMemorandumWatermarkUrlInput" type="url" placeholder="Public image URL o Google Drive share link" />
-                  </label>
-                  <label>
-                    Default na Larawan ng Lagda
-                    <input id="defaultSignatureImageUrlInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
-                  </label>
-                </div>
+                <label>
+                  Default na Larawan ng Lagda
+                  <input id="defaultSignatureImageUrlInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
+                </label>
 
                 <div class="form-row">
                   <label>
