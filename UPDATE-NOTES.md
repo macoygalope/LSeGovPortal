@@ -1,47 +1,48 @@
-# Los Santos eGov V6.6 — Automatic Numbering, Sorting, at Pinned Announcements
+# Los Santos eGov V6.8 — Global Loading & Fetch State
 
-## Automatic numbering
+## Ano ang bago
 
-Sa unang pag-publish ng bagong Executive Order, memorandum, o resolusyon, awtomatikong itatalaga ang kasunod na numero:
+Lahat ng public pages ay may branded loading screen habang kinukuha ang data mula sa Google Sheets / Apps Script backend:
 
-- `Executive Order Blg. 08, Serye ng 2026`
-- `Memorandum Blg. 2026-03`
-- `Resolusyon Blg. 06, Serye ng 2026`
+- Homepage
+- Mga Anunsyo
+- Executive Orders
+- Mga Resolusyon
+- Hidden na Mga Memorandum archive
+- Individual memorandum page
 
-Magkahiwalay ang sequence ng bawat uri at bawat taon. Hindi nire-recycle ang numero kapag may binurang record. Hindi rin binabago ang numero kapag in-edit o ginawang draft muli ang isang published document.
+Hindi muna ipinapakita ang page content, record counts, empty states, sorting, o cards hangga't hindi kumpleto ang initial database fetch.
 
-May manual override sa Admin Dashboard: alisin ang check sa awtomatikong numbering at ilagay ang kumpletong numero.
+## Kapag mabagal o pumalya ang backend
 
-## Sorting
+Pagkalipas ng humigit-kumulang 12 segundo na walang maayos na response, hindi na magpapakita ng misleading sample records. Sa halip ay lalabas ang malinaw na error state na may:
 
-May dropdown na sa archive page ng Executive Orders, Mga Memorandum, at Mga Resolusyon:
+- “Hindi makuha ang mga tala”
+- paliwanag tungkol sa database connection
+- **Subukan Muli** button
 
-- Pinakabago
-- Pinakaluma
-- Numero — Pataas
-- Numero — Pababa
+Hindi kailangang i-refresh ang buong browser para mag-retry.
 
-## Pinned announcements
+## Smooth loading
 
-Sa Mga Anunsyo, maaari nang:
+May minimum na humigit-kumulang 550ms display time ang loader para hindi ito mag-flicker kapag mabilis ang database response. Pagkatapos ma-render ang tunay na records, saka lamang magfa-fade out ang loading screen.
 
-- I-pin bilang mahalagang anunsyo
-- Magtakda ng pin order mula 1 hanggang 3
-- Magtakda ng optional expiration date
+## Local development
 
-Ang mga aktibong pinned announcement ay gold/cream ang card at nauuna sa homepage at announcements archive. Hanggang tatlo lamang ang maaaring aktibong naka-pin.
+Ang bundled preview/sample records ay ginagamit lamang kapag local/file preview ang website at hindi configured ang backend. Sa GitHub Pages/production, database failure = error/retry state, hindi sample content.
 
-## Installation
+## Admin Dashboard
 
-### GitHub
+- Kapag walang saved admin token, agad na lalabas ang login page.
+- Kapag may existing session token, mananatili muna ang boot cover habang bine-verify ang admin access at kinukuha ang initial records.
+- Ang pagpalit ng admin sections ay gumagamit pa rin ng localized “Kinukuha ang mga record…” state para hindi unnecessary na i-lock ang buong dashboard.
 
-I-upload at palitan ang lahat ng files sa patch maliban sa `google-apps-script/Code.gs`, na para sa Apps Script editor.
+## Retained V6.7 behavior
 
-### Google Apps Script
+Kasama pa rin ang Forms Detail Pop-out:
 
-1. Palitan ang lumang `Code.gs`.
-2. Save.
-3. Patakbuhin ang `setupSheets()`.
-4. Deploy → Manage deployments → Edit → New version → Deploy.
+Form card → instructions/detail pop-out → **Buksan ang Form** → external Google Form.
 
-Ang `setupSheets()` ay magdadagdag ng bagong columns at hidden `Numbering` sheet. Hindi nito buburahin ang existing records.
+## Backend
+
+Walang Google Sheet migration at walang Code.gs update na kailangan para sa V6.8.

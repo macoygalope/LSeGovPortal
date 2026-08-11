@@ -1,16 +1,17 @@
-LOS SANTOS eGOV V6.6 — INCLUDED FEATURES
+LOS SANTOS eGOV V6.8 — VERIFIED INCLUDED
 
-✓ Automatic numbering for Executive Orders
-✓ Automatic numbering for Memorandums
-✓ Automatic numbering for Resolutions
-✓ Manual number override
-✓ Separate yearly numbering sequences
-✓ Sorting: newest, oldest, number ascending, number descending
-✓ Pinned announcements with gold design
-✓ Maximum of three active pinned announcements
-✓ Pin order and optional expiration date
-✓ Hero booking button retained
-✓ Memorandums remain hidden from the public homepage/navigation
-✓ Default document image remains the memorandum letterhead
-✓ Enlarged memorandum signature retained
-✓ config.js intentionally not included
+✓ V6.6 automatic numbering
+✓ V6.6 document sorting
+✓ V6.6 pinned announcements
+✓ V6.7 form instructions/detail pop-out
+✓ Hero “Makipagpulong kay Mayor” booking button
+✓ Memorandums hidden from main public navigation/homepage
+✓ Memorandum structured fields
+✓ Default document image as memorandum letterhead
+✓ Enlarged memorandum signature
+✓ Global initial database loader on every public page
+✓ Production database failure screen
+✓ Retry without full page refresh
+✓ No production sample fallback on fetch failure
+✓ Admin initial auth/record boot state
+✓ config.js not included

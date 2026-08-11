@@ -31,6 +31,14 @@ function isConfigured() {
   return API_URL && !API_URL.includes("PASTE_YOUR");
 }
 
+function finishAdminBoot() {
+  document.documentElement.classList.remove("egov-booting");
+}
+
+function showAdminBootMessage(message) {
+  document.documentElement.setAttribute("data-egov-boot-message", message || "Kinukuha ang admin records…");
+}
+
 function jsonp(params, timeoutMs = 25000) {
   return new Promise((resolve, reject) => {
     if (!isConfigured()) {
@@ -177,6 +185,7 @@ function showLogin() {
 }
 
 async function validateLogin() {
+  showAdminBootMessage("Sinusuri ang admin access at kinukuha ang mga record…");
   try {
     await jsonp({ action: "auth" });
     sessionStorage.setItem("egovAdminToken", adminToken);
@@ -187,6 +196,8 @@ async function validateLogin() {
     sessionStorage.removeItem("egovAdminToken");
     showLogin();
     showToast(error.message);
+  } finally {
+    finishAdminBoot();
   }
 }
 
@@ -631,4 +642,7 @@ document.getElementById("contentInput").addEventListener("keydown", (event) => {
 
 configureEntryFields();
 if (adminToken) validateLogin();
-else showLogin();
+else {
+  showLogin();
+  finishAdminBoot();
+}

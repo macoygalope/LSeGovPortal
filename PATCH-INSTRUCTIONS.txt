@@ -1,24 +1,31 @@
-LOS SANTOS eGOV V6.6 PATCH
+LOS SANTOS eGOV — V6.8 GLOBAL LOADING PATCH
 
-GITHUB FILES:
+SA GITHUB, I-UPLOAD/PALITAN LAHAT NG FILES SA PATCH MALIBAN SA NOTES KUNG AYAW MO:
+- index.html
+- announcements.html
+- executive-orders.html
+- memorandums.html
+- memorandum.html
+- resolutions.html
 - admin.html
 - admin.js
 - app.js
 - documents.js
+- memorandum.js
 - shared.js
 - styles.css
-- executive-orders.html
-- memorandums.html
-- resolutions.html
 
-GOOGLE APPS SCRIPT:
-- google-apps-script/Code.gs
+MAHALAGA:
+- Huwag palitan ang config.js.
+- Walang Google Sheet migration.
+- Walang Apps Script / Code.gs update.
+- Walang deployment update na kailangan.
 
-INSTALL:
-1. Upload the GitHub files and commit.
-2. Replace Code.gs in Extensions > Apps Script.
-3. Run setupSheets().
-4. Update the Web App deployment using New version.
-5. Hard refresh using Ctrl + Shift + R.
+Pagkatapos mag-commit sa GitHub Pages:
+Ctrl + Shift + R
 
-Do not replace config.js.
+TEST:
+1. Normal load: loader muna, saka records.
+2. Temporary backend failure: error screen + Subukan Muli.
+3. Form card: detail pop-out pa rin bago Google Form.
+4. Hidden memorandum URL at signature/letterhead features remain intact.

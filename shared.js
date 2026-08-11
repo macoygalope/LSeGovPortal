@@ -167,7 +167,7 @@ window.Egov = (() => {
     return API_URL && !API_URL.includes("PASTE_YOUR");
   }
 
-  function jsonp(params, timeoutMs = 18000) {
+  function jsonp(params, timeoutMs = 12000) {
     return new Promise((resolve, reject) => {
       if (!isConfigured()) {
         reject(new Error("Hindi pa nakakabit ang Google Sheets backend."));
@@ -203,22 +203,122 @@ window.Egov = (() => {
     });
   }
 
+  function isLocalPreview() {
+    const host = String(window.location.hostname || "").toLowerCase();
+    return window.location.protocol === "file:" || host === "localhost" || host === "127.0.0.1";
+  }
+
+  function ensureGlobalLoadingScreen() {
+    let screen = document.getElementById("egovGlobalLoadingScreen");
+    if (screen) return screen;
+
+    screen = document.createElement("div");
+    screen.id = "egovGlobalLoadingScreen";
+    screen.className = "egov-global-loading-screen";
+    screen.setAttribute("role", "status");
+    screen.setAttribute("aria-live", "polite");
+    screen.innerHTML = `
+      <div class="egov-loader-card">
+        <div class="egov-loader-seal" aria-hidden="true">LS</div>
+        <p class="egov-loader-kicker">Pamahalaang Panglungsod ng Los Santos</p>
+        <h1 id="egovLoaderTitle">Los Santos eGov</h1>
+        <div class="egov-loader-spinner" id="egovLoaderSpinner" aria-hidden="true"></div>
+        <p class="egov-loader-message" id="egovLoaderMessage">Kinukuha ang mga pinakabagong tala…</p>
+        <p class="egov-loader-detail" id="egovLoaderDetail">Sandaling maghintay habang kumokonekta sa eGov database.</p>
+        <button class="button button-primary egov-loader-retry hidden" id="egovLoaderRetry" type="button">Subukan Muli</button>
+      </div>
+    `;
+    document.body.appendChild(screen);
+    // The CSS-only boot cover can now hand off to the interactive loader without a flash.
+    document.documentElement.classList.remove("egov-booting");
+    document.documentElement.classList.add("egov-loading-active");
+    return screen;
+  }
+
+  function setGlobalLoadingState(mode, detail = "") {
+    const screen = ensureGlobalLoadingScreen();
+    const title = screen.querySelector("#egovLoaderTitle");
+    const message = screen.querySelector("#egovLoaderMessage");
+    const detailEl = screen.querySelector("#egovLoaderDetail");
+    const spinner = screen.querySelector("#egovLoaderSpinner");
+    const retry = screen.querySelector("#egovLoaderRetry");
+
+    screen.classList.toggle("is-error", mode === "error");
+    retry.classList.toggle("hidden", mode !== "error");
+    spinner.classList.toggle("hidden", mode === "error");
+
+    if (mode === "error") {
+      title.textContent = "Hindi makuha ang mga tala";
+      message.textContent = "Hindi makakonekta sa eGov database sa ngayon.";
+      detailEl.textContent = detail || "Maaaring pansamantalang mabagal ang koneksyon. Maaari mong subukan muli.";
+    } else {
+      title.textContent = "Los Santos eGov";
+      message.textContent = mode === "retry" ? "Sinusubukang kumonekta muli…" : "Kinukuha ang mga pinakabagong tala…";
+      detailEl.textContent = "Sandaling maghintay habang kumokonekta sa eGov database.";
+    }
+
+    return screen;
+  }
+
+  function waitForGlobalRetry(error) {
+    const screen = setGlobalLoadingState("error", error && error.message ? error.message : "");
+    const retry = screen.querySelector("#egovLoaderRetry");
+    return new Promise((resolve) => {
+      retry.onclick = () => {
+        retry.onclick = null;
+        setGlobalLoadingState("retry");
+        resolve();
+      };
+    });
+  }
+
+  function finishGlobalLoading() {
+    const screen = document.getElementById("egovGlobalLoadingScreen");
+    if (!screen) {
+      document.documentElement.classList.remove("egov-booting", "egov-loading-active");
+      return;
+    }
+
+    // Two frames give the page-specific renderer time to paint the fetched records
+    // before the loading cover fades away.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      screen.classList.add("is-complete");
+      document.documentElement.classList.remove("egov-loading-active");
+      setTimeout(() => screen.remove(), 320);
+    }));
+  }
+
   async function loadAll() {
-    try {
-      if (!isConfigured()) throw new Error("Preview mode");
-      const result = await jsonp({ action: "all" });
-      const data = result.data || {};
-      EGOV_SECTIONS.forEach((section) => {
-        if (!Array.isArray(data[section])) data[section] = [];
-      });
-      data.SiteSettings = data.SiteSettings || {};
-      return data;
-    } catch (error) {
-      console.warn(error.message);
-      showToast(isConfigured()
-        ? "Hindi makuha ang Google Sheet. Preview content muna ang ipinapakita."
-        : "Preview mode: ilagay ang Apps Script URL sa config.js.");
+    const startedAt = Date.now();
+    ensureGlobalLoadingScreen();
+
+    // Local/file preview may still use bundled sample records for development.
+    if (!isConfigured() && isLocalPreview()) {
+      const wait = Math.max(0, 550 - (Date.now() - startedAt));
+      if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+      finishGlobalLoading();
       return JSON.parse(JSON.stringify(EGOV_FALLBACK));
+    }
+
+    while (true) {
+      try {
+        if (!isConfigured()) throw new Error("Hindi pa nakakabit ang Google Sheets backend ng portal.");
+
+        const result = await jsonp({ action: "all" }, 12000);
+        const data = result.data || {};
+        EGOV_SECTIONS.forEach((section) => {
+          if (!Array.isArray(data[section])) data[section] = [];
+        });
+        data.SiteSettings = data.SiteSettings || {};
+
+        const wait = Math.max(0, 550 - (Date.now() - startedAt));
+        if (wait) await new Promise((resolve) => setTimeout(resolve, wait));
+        finishGlobalLoading();
+        return data;
+      } catch (error) {
+        console.warn(error.message);
+        await waitForGlobalRetry(error);
+      }
     }
   }
 
@@ -792,6 +892,7 @@ window.Egov = (() => {
     labels: EGOV_LABELS,
     fallback: EGOV_FALLBACK,
     loadAll,
+    finishGlobalLoading,
     jsonp,
     published,
     newest,
