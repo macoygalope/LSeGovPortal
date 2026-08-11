@@ -2,9 +2,18 @@ const CONFIG = window.EGOV_CONFIG || {};
 const API_URL = CONFIG.API_URL || "";
 
 const EGOV_SECTIONS = ["Forms", "Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"];
-const EGOV_DOCUMENT_SECTIONS = ["Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"];
+const EGOV_DOCUMENT_SECTIONS = ["Forms", "Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"];
 
 const EGOV_LABELS = {
+  Forms: {
+    singular: "Online na Form",
+    plural: "Mga Form",
+    empty: "Wala pang form na nailalathala.",
+    readAction: "Tingnan ang Detalye →",
+    externalAction: "Buksan ang Form",
+    noContent: "Wala pang nakatalang tagubilin",
+    defaultDescription: "Basahin muna ang mga tagubilin bago buksan ang form."
+  },
   Announcements: {
     singular: "Anunsyo",
     plural: "Mga Anunsyo",
@@ -74,10 +83,10 @@ const EGOV_FALLBACK = {
     footerText: "© Pamahalaang Panglungsod ng Los Santos. Lahat ng karapatan ay nakalaan."
   },
   Forms: [
-    { id: "form-1", title: "OOC Talk Forms", description: "Magsumite ng opisyal na OOC concern o kahilingan.", url: "#", icon: "💬", image: "", published: true, order: 1 },
-    { id: "form-2", title: "Vehicle Registration Form", description: "Iparehistro ang sasakyan sa Pamahalaang Panglungsod.", url: "#", icon: "🚘", image: "", published: true, order: 2 },
-    { id: "form-3", title: "Business Registration / Update Form", description: "Magparehistro ng negosyo o mag-update ng kasalukuyang business record.", url: "#", icon: "🏪", image: "", published: true, order: 3 },
-    { id: "form-4", title: "Organization Application", description: "Magsumite ng aplikasyon para sa opisyal na pagkilala sa isang organisasyon.", url: "#", icon: "👥", image: "", published: true, order: 4 }
+    { id: "form-1", title: "OOC Talk Forms", description: "Magsumite ng opisyal na OOC concern o kahilingan.", url: "#", icon: "💬", image: "", published: true, order: 1, content: "## Bago magsumite\n\nBasahin muna ang mga sumusunod bago buksan ang form:\n\n- Ilahad nang malinaw ang concern o kahilingan.\n- Magbigay lamang ng impormasyong may kaugnayan sa usapin.\n- Siguraduhing tama ang mga detalye bago isumite." },
+    { id: "form-2", title: "Vehicle Registration Form", description: "Iparehistro ang sasakyan sa Pamahalaang Panglungsod.", url: "#", icon: "🚘", image: "", published: true, order: 2, content: "## Mga Tagubilin\n\nIhanda ang kinakailangang impormasyon tungkol sa sasakyan at sa rehistradong may-ari bago buksan ang form." },
+    { id: "form-3", title: "Business Registration / Update Form", description: "Magparehistro ng negosyo o mag-update ng kasalukuyang business record.", url: "#", icon: "🏪", image: "", published: true, order: 3, content: "## Paalala\n\nGamitin ang form na ito para sa bagong business registration o pagbabago sa kasalukuyang record. Tiyaking kumpleto at tama ang impormasyong isusumite." },
+    { id: "form-4", title: "Organization Application", description: "Magsumite ng aplikasyon para sa opisyal na pagkilala sa isang organisasyon.", url: "#", icon: "👥", image: "", published: true, order: 4, content: "## Bago Mag-apply\n\nIhanda ang pangalan ng organisasyon, mga pangunahing kinatawan, layunin, at iba pang kinakailangang detalye bago buksan ang application form." }
   ],
   Announcements: [
     {
@@ -639,25 +648,49 @@ window.Egov = (() => {
 
     function openDocument(section, id, updateHistory = true) {
       const item = findDocument(data, section, id);
-      if (!item || (!String(item.content || "").trim() && safeUrl(item.url) === "#")) return;
+      const isForm = section === "Forms";
+      const hasContent = Boolean(String(item?.content || "").trim());
+      const externalUrl = item ? safeUrl(item.url) : "#";
 
-      if (!String(item.content || "").trim() && safeUrl(item.url) !== "#") {
-        window.open(safeUrl(item.url), "_blank", "noopener,noreferrer");
+      if (!item || (!hasContent && externalUrl === "#")) return;
+
+      // Ang mga form ay laging dumadaan muna sa detail pop-out bago buksan
+      // ang external Google Form link.
+      if (!isForm && !hasContent && externalUrl !== "#") {
+        window.open(externalUrl, "_blank", "noopener,noreferrer");
         return;
       }
 
       const label = EGOV_LABELS[section] || { singular: "Opisyal na Dokumento" };
       const externalLink = document.getElementById("viewerExternalLink");
       const viewerImage = document.getElementById("viewerImage");
+      const viewerDate = document.getElementById("viewerDate");
+      const viewerOffice = viewer.querySelector(".official-document-footer p");
 
+      viewer.classList.toggle("form-viewer-mode", isForm);
       document.getElementById("viewerCategory").textContent = label.singular;
-      document.getElementById("viewerNumber").textContent = item.number || label.singular;
-      document.getElementById("viewerTitle").textContent = item.title || "Opisyal na Dokumento";
-      document.getElementById("viewerDate").textContent = formatDate(item.date);
-      document.getElementById("viewerContent").innerHTML = documentContentToHtml(item.content);
+      document.getElementById("viewerNumber").textContent = isForm ? "Serbisyong Online" : (item.number || label.singular);
+      document.getElementById("viewerTitle").textContent = item.title || (isForm ? "Online na Form" : "Opisyal na Dokumento");
+
+      if (isForm) {
+        viewerDate.textContent = "";
+        viewerDate.classList.add("hidden");
+        document.getElementById("viewerContent").innerHTML = documentContentToHtml(
+          item.content || item.description || "Basahin ang mga detalye bago buksan ang form."
+        );
+        if (viewerOffice) viewerOffice.classList.add("hidden");
+      } else {
+        viewerDate.textContent = formatDate(item.date);
+        viewerDate.classList.remove("hidden");
+        document.getElementById("viewerContent").innerHTML = documentContentToHtml(item.content);
+        if (viewerOffice) viewerOffice.classList.remove("hidden");
+      }
+
       document.getElementById("viewerMayorName").textContent = settings.mayorName || EGOV_FALLBACK.SiteSettings.mayorName;
 
-      const cover = imageUrl(item.image || settings.defaultDocumentImageUrl);
+      // Para sa form, ang mismong image ng entry ang header image.
+      // Hindi gagamit ng generic document cover bilang fallback.
+      const cover = imageUrl(isForm ? item.image : (item.image || settings.defaultDocumentImageUrl));
       if (cover) {
         viewerImage.src = cover;
         viewerImage.alt = `Larawan para sa ${item.title}`;
@@ -668,8 +701,12 @@ window.Egov = (() => {
         viewerImage.classList.add("hidden");
       }
 
-      const externalUrl = safeUrl(item.url);
-      externalLink.textContent = label.externalAction || "Buksan ang Kaugnay na Link ↗";
+      externalLink.textContent = isForm
+        ? "Buksan ang Form"
+        : (label.externalAction || "Buksan ang Kaugnay na Link ↗");
+      externalLink.classList.toggle("button-primary", isForm);
+      externalLink.classList.toggle("button-secondary", !isForm);
+
       if (externalUrl !== "#") {
         externalLink.href = externalUrl;
         externalLink.classList.remove("hidden");
@@ -693,7 +730,7 @@ window.Egov = (() => {
 
     function closeDocument(updateHistory = true) {
       if (!viewer.classList.contains("open")) return;
-      viewer.classList.remove("open");
+      viewer.classList.remove("open", "form-viewer-mode");
       viewer.setAttribute("aria-hidden", "true");
       document.body.classList.remove("viewer-open");
 

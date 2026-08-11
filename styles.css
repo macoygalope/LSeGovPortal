@@ -1347,3 +1347,111 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
     min-width: 0;
   }
 }
+
+
+/* V6.7 — Form detail pop-out */
+.form-card-button {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+}
+
+.form-card-button:focus-visible {
+  outline: 3px solid rgba(31, 99, 183, 0.22);
+  outline-offset: 3px;
+}
+
+.document-viewer.form-viewer-mode .document-viewer-page {
+  max-width: 940px;
+}
+
+.document-viewer.form-viewer-mode .viewer-scroll {
+  padding-top: 26px;
+}
+
+.document-viewer.form-viewer-mode .official-document {
+  min-height: 0;
+  padding: 0 0 48px;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.document-viewer.form-viewer-mode .official-document-cover {
+  width: 100%;
+  max-height: 360px;
+  margin: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+
+.document-viewer.form-viewer-mode .official-document-heading {
+  margin: 0 58px 30px;
+  padding: 42px 0 24px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.document-viewer.form-viewer-mode .official-document-heading h2 {
+  margin: 9px 0 0;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: clamp(25px, 4vw, 34px);
+  line-height: 1.18;
+  text-transform: none;
+}
+
+.document-viewer.form-viewer-mode .official-document-body {
+  padding: 0 58px;
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.document-viewer.form-viewer-mode .official-document-body p,
+.document-viewer.form-viewer-mode .official-document-body .document-list li {
+  text-align: left;
+}
+
+.document-viewer.form-viewer-mode .official-document-footer {
+  justify-content: flex-end;
+  margin: 38px 58px 0;
+  padding-top: 24px;
+}
+
+.document-viewer.form-viewer-mode #viewerExternalLink {
+  min-width: 180px;
+  min-height: 50px;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .document-viewer.form-viewer-mode .official-document {
+    padding-bottom: 34px;
+    border-radius: 0;
+  }
+
+  .document-viewer.form-viewer-mode .official-document-cover {
+    max-height: 230px;
+  }
+
+  .document-viewer.form-viewer-mode .official-document-heading {
+    margin: 0 22px 24px;
+    padding-top: 30px;
+  }
+
+  .document-viewer.form-viewer-mode .official-document-body {
+    padding: 0 22px;
+  }
+
+  .document-viewer.form-viewer-mode .official-document-footer {
+    margin: 30px 22px 0;
+    align-items: stretch;
+  }
+
+  .document-viewer.form-viewer-mode #viewerExternalLink {
+    width: 100%;
+  }
+}

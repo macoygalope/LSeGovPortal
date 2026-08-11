@@ -10,7 +10,7 @@ const SECTION_NAMES = {
   Settings: "Mga Larawan at Ayos"
 };
 
-const INTERNAL_DOCUMENT_SECTIONS = new Set(["Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"]);
+const INTERNAL_DOCUMENT_SECTIONS = new Set(["Forms", "Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"]);
 const AUTO_NUMBER_SECTIONS = new Set(["ExecutiveOrders", "Memorandums", "Resolutions"]);
 const CONTENT_CHUNK_SIZE = 1050;
 
@@ -211,16 +211,20 @@ function configureEntryFields() {
   document.getElementById("numberInput").required = false;
   document.getElementById("dateInput").required = isMemorandum || hasAutoNumber;
 
-  document.getElementById("contentFieldLabel").textContent = isAnnouncement
-    ? "Buong Nilalaman ng Anunsyo"
-    : isMemorandum
-      ? "Nilalaman ng Memorandum"
-      : "Buong Nilalaman ng Dokumento";
-  document.getElementById("contentInput").placeholder = isAnnouncement
-    ? "Isulat dito ang buong detalye ng proyekto, programa, kaganapan, o opisyal na pabatid. Maaari mong gamitin ang formatting buttons sa itaas."
-    : isMemorandum
-      ? "Isulat dito ang katawan ng memorandum. Huwag nang ulitin ang PARA SA, MULA KAY, PAKSA, PETSA, o lagda dahil awtomatiko silang ilalagay sa internal memorandum page."
-      : "I-paste o isulat dito ang buong dokumento. Piliin ang teksto at gamitin ang formatting buttons sa itaas.";
+  document.getElementById("contentFieldLabel").textContent = isForm
+    ? "Mga Tagubilin at Detalye ng Form"
+    : isAnnouncement
+      ? "Buong Nilalaman ng Anunsyo"
+      : isMemorandum
+        ? "Nilalaman ng Memorandum"
+        : "Buong Nilalaman ng Dokumento";
+  document.getElementById("contentInput").placeholder = isForm
+    ? "Ilagay dito ang mga tagubilin, requirements, paalala, proseso, o anumang detalye na dapat basahin muna bago buksan ang form. Maaari mong gamitin ang bold, italic, heading, bullet, numbering, quote, at separator."
+    : isAnnouncement
+      ? "Isulat dito ang buong detalye ng proyekto, programa, kaganapan, o opisyal na pabatid. Maaari mong gamitin ang formatting buttons sa itaas."
+      : isMemorandum
+        ? "Isulat dito ang katawan ng memorandum. Huwag nang ulitin ang PARA SA, MULA KAY, PAKSA, PETSA, o lagda dahil awtomatiko silang ilalagay sa internal memorandum page."
+        : "I-paste o isulat dito ang buong dokumento. Piliin ang teksto at gamitin ang formatting buttons sa itaas.";
   document.getElementById("numberFieldLabel").textContent = isAnnouncement
     ? "Uri o Sanggunian (opsyonal)"
     : isMemorandum
@@ -239,7 +243,7 @@ function configureEntryFields() {
     ? "(kailangan para sa mga form)"
     : "(opsyonal)";
   document.getElementById("urlHelpText").textContent = isForm
-    ? "Ilagay ang Google Form link."
+    ? "Ilagay ang Google Form link. Hindi ito agad bubuksan sa public site; lalabas muna ang instructions/detail pop-out bago ang “Buksan ang Form” button."
     : isAnnouncement
       ? "Opsyonal na registration link, event page, photo album, o karagdagang detalye."
       : "Opsyonal na link sa signed PDF, Google Drive file, o opisyal na kopya.";

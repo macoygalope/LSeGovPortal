@@ -23,14 +23,21 @@ function renderForms(items, settings) {
   }
 
   grid.innerHTML = visible.map((item) => `
-    <a class="form-card" ${Egov.linkAttributes(item.url)}>
+    <button
+      class="form-card form-card-button"
+      type="button"
+      data-open-document
+      data-section="Forms"
+      data-id="${Egov.escapeHtml(item.id)}"
+      aria-label="Tingnan muna ang detalye ng ${Egov.escapeHtml(item.title)}"
+    >
       ${Egov.cardMedia(item, "", "📄")}
       <div class="form-card-body">
         <h3>${Egov.escapeHtml(item.title)}</h3>
-        <p>${Egov.escapeHtml(item.description || "Buksan ang opisyal na online form.")}</p>
-        <span class="card-link">Buksan ang Form ↗</span>
+        <p>${Egov.escapeHtml(item.description || "Tingnan muna ang mga tagubilin bago buksan ang opisyal na form.")}</p>
+        <span class="card-link">Tingnan ang Detalye →</span>
       </div>
-    </a>
+    </button>
   `).join("");
 }
 
