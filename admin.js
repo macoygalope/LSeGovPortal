@@ -13,6 +13,8 @@ const SECTION_NAMES = {
 const INTERNAL_DOCUMENT_SECTIONS = new Set(["Forms", "Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"]);
 const AUTO_NUMBER_SECTIONS = new Set(["ExecutiveOrders", "Memorandums", "Resolutions"]);
 const CONTENT_CHUNK_SIZE = 1050;
+const CONTENT_UPLOAD_MAX_RETRIES = 3;
+const CONTENT_UPLOAD_RETRY_DELAY_MS = 900;
 
 let activeSection = "Forms";
 let records = [];
@@ -418,23 +420,106 @@ async function deleteRecord(id) {
   }
 }
 
-async function uploadLongContent(content) {
+function waitMs(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createStableEntryId() {
+  if (window.crypto && typeof window.crypto.randomUUID === "function") {
+    return window.crypto.randomUUID();
+  }
+  return `record_${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+}
+
+function ensureStableEntryId() {
+  const field = document.getElementById("entryId");
+  if (!field.value.trim()) field.value = createStableEntryId();
+  return field.value.trim();
+}
+
+async function uploadChunkWithRetry({ uploadId, index, total, chunk, onProgress }) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= CONTENT_UPLOAD_MAX_RETRIES; attempt += 1) {
+    try {
+      if (typeof onProgress === "function") {
+        onProgress(index + 1, total, attempt);
+      }
+
+      return await jsonp({
+        action: "uploadChunk",
+        uploadId,
+        index: String(index),
+        total: String(total),
+        chunk
+      }, 30000);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= CONTENT_UPLOAD_MAX_RETRIES) break;
+      await waitMs(CONTENT_UPLOAD_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  throw new Error(
+    `Hindi ma-upload ang bahagi ${index + 1} sa ${total}. ${lastError?.message || "Subukang muli."}`
+  );
+}
+
+async function uploadLongContent(content, onProgress) {
   if (!content) return "";
+
   const chunks = [];
   for (let index = 0; index < content.length; index += CONTENT_CHUNK_SIZE) {
     chunks.push(content.slice(index, index + CONTENT_CHUNK_SIZE));
   }
 
   const uploadId = `upload_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
   for (let index = 0; index < chunks.length; index += 1) {
-    await jsonp({
-      action: "uploadChunk",
+    await uploadChunkWithRetry({
       uploadId,
-      index: String(index),
-      total: String(chunks.length),
-      chunk: chunks[index]
+      index,
+      total: chunks.length,
+      chunk: chunks[index],
+      onProgress
     });
   }
+
+  // Huling verification bago ipasa ang uploadId sa actual save.
+  const status = await jsonp({
+    action: "uploadStatus",
+    uploadId,
+    total: String(chunks.length)
+  }, 30000);
+
+  const missing = Array.isArray(status.data?.missing) ? status.data.missing : [];
+  if (missing.length) {
+    for (const missingIndex of missing) {
+      const index = Number(missingIndex);
+      if (!Number.isInteger(index) || index < 0 || index >= chunks.length) continue;
+
+      await uploadChunkWithRetry({
+        uploadId,
+        index,
+        total: chunks.length,
+        chunk: chunks[index],
+        onProgress
+      });
+    }
+
+    const verified = await jsonp({
+      action: "uploadStatus",
+      uploadId,
+      total: String(chunks.length)
+    }, 30000);
+
+    if (!verified.data?.complete) {
+      throw new Error("Hindi nakumpleto ang pag-upload ng dokumento. Subukang i-save muli.");
+    }
+  } else if (!status.data?.complete) {
+    throw new Error("Hindi nakumpleto ang pag-upload ng dokumento. Subukang i-save muli.");
+  }
+
   return uploadId;
 }
 
@@ -465,7 +550,7 @@ async function saveRecord(event) {
   }
 
   const payload = {
-    id: document.getElementById("entryId").value.trim(),
+    id: ensureStableEntryId(),
     title: isMemorandum ? memorandumSubject : document.getElementById("titleInput").value.trim(),
     description: document.getElementById("descriptionInput").value.trim(),
     subject: memorandumSubject,
@@ -495,17 +580,21 @@ async function saveRecord(event) {
   try {
     let uploadId = "";
     if (content) {
-      button.textContent = "Ina-upload ang nilalaman…";
-      uploadId = await uploadLongContent(content);
+      button.textContent = "Inihahanda ang nilalaman…";
+      uploadId = await uploadLongContent(content, (current, total, attempt) => {
+        button.textContent = attempt > 1
+          ? `Muling ina-upload ang bahagi ${current} sa ${total}…`
+          : `Ina-upload ang bahagi ${current} sa ${total}…`;
+      });
     }
 
-    button.textContent = "Sine-save…";
+    button.textContent = "Tinatapos ang pag-save…";
     const result = await jsonp({
       action: "upsert",
       section: activeSection,
       uploadId,
       payload: JSON.stringify(payload)
-    }, 35000);
+    }, 60000);
 
     const assignedNumber = result.data && result.data.number ? ` ${result.data.number}` : "";
     showToast(payload.id ? `Na-update na ang entry.${assignedNumber}` : `Nagawa na ang bagong entry.${assignedNumber}`);
