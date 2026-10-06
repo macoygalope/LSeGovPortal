@@ -5,7 +5,7 @@ import type { EgovData } from "./types.ts";
 const FETCH_TIMEOUT_MS = 30_000;
 const FETCH_ATTEMPTS = 3;
 
-async function fetchLivePayload(apiUrl: string): Promise<unknown> {
+export async function fetchLivePayload(apiUrl: string): Promise<unknown> {
   const url = new URL(apiUrl);
   url.searchParams.set("action", "all");
 
@@ -33,6 +33,14 @@ async function load(): Promise<EgovData> {
   const dataFile = process.env.EGOV_DATA_FILE;
   if (dataFile) {
     return normalizePayload(JSON.parse(await readFile(dataFile, "utf8")));
+  }
+
+  // A local SQLite copy of the sheet (see db.ts). Loaded on demand so that
+  // node:sqlite is only touched by builds that ask for it.
+  const dbFile = process.env.EGOV_DB_FILE;
+  if (dbFile) {
+    const { readPayloadFromFile } = await import("./db.ts");
+    return normalizePayload(readPayloadFromFile(dbFile));
   }
 
   const apiUrl = import.meta.env.PUBLIC_EGOV_API_URL;

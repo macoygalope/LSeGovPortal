@@ -35,7 +35,7 @@ export function toNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function toText(value: unknown): string {
+export function toText(value: unknown): string {
   return value == null ? "" : String(value).trim();
 }
 
@@ -79,12 +79,8 @@ export function normalizeSettings(raw: Record<string, unknown> | undefined): Sit
   return merged as unknown as SiteSettings;
 }
 
-/**
- * Turns an Apps Script `action=all` payload into typed data. Unpublished
- * records and records without an id are dropped here, so nothing downstream
- * can leak a draft into the static output.
- */
-export function normalizePayload(payload: unknown): EgovData {
+/** The `data` object of an Apps Script response; throws if it is an error or malformed. */
+export function payloadData(payload: unknown): Record<string, unknown> {
   if (!payload || typeof payload !== "object") {
     throw new Error("eGov payload is not an object.");
   }
@@ -96,14 +92,29 @@ export function normalizePayload(payload: unknown): EgovData {
   if (!data || typeof data !== "object") {
     throw new Error("eGov payload has no data.");
   }
+  return data;
+}
+
+/** The raw rows of one section. A payload must carry every section, even empty. */
+export function payloadRows(data: Record<string, unknown>, section: Section): unknown[] {
+  const rows = data[section];
+  if (!Array.isArray(rows)) {
+    throw new Error(`eGov payload is missing the "${section}" section.`);
+  }
+  return rows;
+}
+
+/**
+ * Turns an Apps Script `action=all` payload into typed data. Unpublished
+ * records and records without an id are dropped here, so nothing downstream
+ * can leak a draft into the static output.
+ */
+export function normalizePayload(payload: unknown): EgovData {
+  const data = payloadData(payload);
 
   const sections = {} as Record<Section, EgovRecord[]>;
   for (const section of SECTIONS) {
-    const rows = data[section];
-    if (!Array.isArray(rows)) {
-      throw new Error(`eGov payload is missing the "${section}" section.`);
-    }
-    sections[section] = rows
+    sections[section] = payloadRows(data, section)
       .map((row) => normalizeRecord(row as Record<string, unknown>))
       .filter((record) => record.id && record.published);
   }

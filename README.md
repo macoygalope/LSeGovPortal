@@ -26,7 +26,7 @@ cp .env.example .env      # set PUBLIC_EGOV_API_URL to the Apps Script /exec URL
 npm run dev               # live data, http://localhost:4321
 ```
 
-Node 22.12 or newer.
+Node 22.13 or newer.
 
 ## Building and deploying to a kiosk
 
@@ -61,6 +61,61 @@ To build from a saved response instead of the live backend:
 EGOV_DATA_FILE=fixtures/live-all.json npm run build:kiosk
 ```
 
+## Local database (SQLite)
+
+A SQLite copy of the sheet, so a build doesn't need the Apps Script backend.
+It uses Node's built-in `node:sqlite`; there is nothing extra to install.
+
+```sh
+npm run db:import -- --file fixtures/live-all.json   # or --live, to pull from the backend
+EGOV_DB_FILE=data/egov.db npm run build:kiosk        # build from it
+```
+
+A build from the database is byte-for-byte the same site as one from the
+backend, because the database is read back out as the same `action=all`
+payload and goes through the same normalising. Like `EGOV_DATA_FILE`, set
+`EGOV_DB_FILE` in the shell for a build. A build fails, rather than publishing
+an empty site, if that file is missing or isn't an eGov database.
+
+| Command | Does |
+|---|---|
+| `npm run db:import -- --file <json>` or `--live` | Loads a saved response, or the live backend. Refuses a database that already has content unless you add `--replace`. |
+| `npm run db:export -- --out backup.json` | Dumps the database in the same format, drafts included. |
+| `npm run db:migrate` | Brings an older database file up to the current schema. |
+
+`--db <path>` picks another file; the default is `$EGOV_DB_FILE`, then `data/egov.db`.
+
+**Tables** (`src/lib/db-schema.ts`):
+
+- `records`: every section's documents, keyed by `(section, id)`. The pin,
+  memorandum and publication-number columns sit here too, because the sheet
+  fills them on every tab.
+- `settings`: the site settings, one row per key.
+- `numbering`: the last sequence handed out per numbered section (executive
+  orders, memorandums, resolutions) and year.
+- Views `forms`, `announcements`, `executive_orders`, `memorandums` and
+  `resolutions`: one read-only view per section with just its own columns, for
+  browsing in any SQLite tool.
+
+**Things to know**
+
+- **It is a copy, not the source of truth.** The Google Sheet is still the CMS
+  and the admin dashboard still writes to it. Importing with `--replace`
+  overwrites whatever is in the database, and `--live` only brings published
+  records, because that is all the backend returns.
+- **The database is stricter than the sheet.** Dates must be `YYYY-MM-DD`, a
+  form needs its link, and two documents can't share a stored number. A bad
+  row stops the whole import and the error names it.
+- **Numbering is worked out at import.** The backend doesn't return its
+  Numbering tab, so each counter starts at the highest number among the
+  imported documents (stored year and sequence, else the printed
+  "Blg. 07, Serye ng 2026"). If the real counter is ahead of that, because it
+  already handed out numbers to documents since deleted, raise `last_sequence`
+  in `numbering`. `allocateSequence()` hands out the next number; nothing in
+  the admin uses it yet.
+- **Changing the schema:** append a migration to `MIGRATIONS` in
+  `src/lib/db-schema.ts`. Never edit one that has been applied.
+
 ## Layout
 
 ```
@@ -72,9 +127,13 @@ src/
   admin/                   dashboard, non-kiosk build only (admin.js is still plain JS)
   components/              Layout, DocumentCard, FormViewer, ExternalAction, ...
   lib/                     data loading, normalising, sorting, markdown, image handling
+  lib/db.ts, db-schema.ts  the local SQLite copy of the sheet and its migrations
   lib/i18n.ts, messages/   localization: helpers and the Filipino / English catalogs
   scripts/                 small client scripts: form pop-out, archive search/sort, language switching
   styles/global.css
+scripts/build.mjs          build wrapper (staging folder, swapped into dist/ on success)
+scripts/db.mjs             db:import / db:export / db:migrate
+data/egov.db               the local database; created by db:import, not committed
 google-apps-script/Code.gs the sheet backend (see the warning below)
 fixtures/live-all.json     a saved backend response, used by the tests
 legacy/                    the previous static site, kept for reference
@@ -114,7 +173,7 @@ between them, and the choice is remembered in the browser.
 ## Tests
 
 ```sh
-npm test         # unit tests: normalising, sorting, numbering, pins, markdown
+npm test         # unit tests: normalising, sorting, numbering, pins, markdown, database
 npm run check    # type-check
 ```
 

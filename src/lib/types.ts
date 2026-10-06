@@ -18,6 +18,15 @@ export const DOCUMENT_SECTIONS = [
 
 export type DocumentSection = (typeof DOCUMENT_SECTIONS)[number];
 
+/** Sections whose documents are numbered per year ("Blg. 07, Serye ng 2026"). */
+export const NUMBERED_SECTIONS = [
+  "ExecutiveOrders",
+  "Memorandums",
+  "Resolutions",
+] as const satisfies readonly Section[];
+
+export type NumberedSection = (typeof NUMBERED_SECTIONS)[number];
+
 export interface EgovRecord {
   id: string;
   title: string;

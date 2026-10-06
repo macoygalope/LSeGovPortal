@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "astro dev",
@@ -13,6 +13,9 @@
     "preview": "astro preview",
     "check": "astro check",
     "test": "node --test --experimental-strip-types src/lib/*.test.ts",
+    "db:import": "node --experimental-strip-types --env-file-if-exists=.env scripts/db.mjs import",
+    "db:export": "node --experimental-strip-types --env-file-if-exists=.env scripts/db.mjs export",
+    "db:migrate": "node --experimental-strip-types --env-file-if-exists=.env scripts/db.mjs migrate",
     "astro": "astro"
   },
   "dependencies": {
