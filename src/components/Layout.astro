@@ -1,0 +1,94 @@
+---
+import "@fontsource/inter/latin-400.css";
+import "@fontsource/inter/latin-500.css";
+import "@fontsource/inter/latin-600.css";
+import "@fontsource/inter/latin-700.css";
+import "@fontsource/inter/latin-800.css";
+import "@fontsource/merriweather/latin-700.css";
+import "../styles/global.css";
+
+import { withBase } from "../lib/url";
+import type { SiteSettings } from "../lib/types";
+import BrandSeal from "./BrandSeal.astro";
+
+interface Props {
+  /** Page name; the site title is appended. Omit on the home page. */
+  title?: string;
+  description?: string;
+  settings: SiteSettings;
+  noindex?: boolean;
+  bodyClass?: string;
+}
+
+const { title, description, settings, noindex = false, bodyClass } = Astro.props;
+const pageTitle = title ? `${title} — ${settings.siteTitle}` : settings.siteTitle;
+const pageDescription =
+  description ?? "Los Santos eGov — mga online na form, anunsyo, executive order, at resolusyon.";
+
+const nav = [
+  { href: withBase("/#forms"), label: "Mga Form" },
+  { href: withBase("/announcements/"), label: "Mga Anunsyo" },
+  { href: withBase("/executive-orders/"), label: "Executive Orders" },
+  { href: withBase("/resolutions/"), label: "Mga Resolusyon" },
+];
+---
+
+<!doctype html>
+<html lang="fil">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={pageDescription} />
+    {noindex && <meta name="robots" content="noindex,nofollow" />}
+    <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
+    <title>{pageTitle}</title>
+  </head>
+  <body class={bodyClass}>
+    <div class="top-strip"></div>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href={withBase("/")} aria-label={settings.siteTitle}>
+          <BrandSeal logoUrl={settings.logoUrl} />
+          <span>
+            <strong>{settings.siteTitle}</strong>
+            <small>{settings.siteSubtitle}</small>
+          </span>
+        </a>
+        <button class="menu-button" id="menuButton" type="button" aria-label="Buksan ang menu" aria-expanded="false">
+          <span></span><span></span><span></span>
+        </button>
+        <nav class="site-nav" id="siteNav">
+          {nav.map((link) => <a href={link.href}>{link.label}</a>)}
+        </nav>
+      </div>
+    </header>
+
+    <slot />
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="brand footer-brand">
+          <BrandSeal logoUrl={settings.logoUrl} />
+          <span>
+            <strong>{settings.siteTitle}</strong>
+            <small>{settings.siteSubtitle}</small>
+          </span>
+        </div>
+        <p><span>{settings.footerText}</span></p>
+      </div>
+    </footer>
+
+    <script>
+      const menuButton = document.getElementById("menuButton");
+      const siteNav = document.getElementById("siteNav");
+      if (menuButton && siteNav) {
+        const setOpen = (open: boolean) => {
+          siteNav.classList.toggle("open", open);
+          menuButton.setAttribute("aria-expanded", String(open));
+        };
+        menuButton.addEventListener("click", () => setOpen(!siteNav.classList.contains("open")));
+        siteNav.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => setOpen(false)));
+      }
+    </script>
+  </body>
+</html>

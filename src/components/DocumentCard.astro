@@ -1,0 +1,64 @@
+---
+import { formatDate } from "../lib/format";
+import { LABELS, SECTION_ROUTE } from "../lib/sections";
+import { withBase } from "../lib/url";
+import type { DocumentSection, EgovRecord } from "../lib/types";
+import CardMedia from "./CardMedia.astro";
+import ExternalAction from "./ExternalAction.astro";
+
+interface Props {
+  item: EgovRecord;
+  section: DocumentSection;
+  fallbackImage?: string;
+  pinned?: boolean;
+  /** Per-sort-mode position, used by the archive page's client-side sort. */
+  ranks?: Record<string, number>;
+  /** Initial position, used by the archive page's client-side paging. */
+  position?: number;
+  hidden?: boolean;
+}
+
+const { item, section, fallbackImage = "", pinned = false, ranks, position, hidden = false } = Astro.props;
+const label = LABELS[section];
+const hasPage = item.content !== "";
+const searchText = `${item.title} ${item.description} ${item.number} ${item.content}`.toLowerCase();
+
+// HTML lowercases attribute names, so the sort mode is lowercased here and
+// again in scripts/archive.ts when it reads the rank back.
+const rankAttrs = ranks
+  ? Object.fromEntries(Object.entries(ranks).map(([mode, rank]) => [`data-rank-${mode.toLowerCase()}`, rank]))
+  : {};
+---
+
+<article
+  class:list={["document-card", { "pinned-announcement": pinned, hidden }]}
+  data-card={ranks ? "" : undefined}
+  data-search={ranks ? searchText : undefined}
+  data-position={position}
+  {...rankAttrs}
+>
+  <CardMedia image={item.image} fallbackImage={fallbackImage} icon={item.icon} />
+  <div class="document-card-body">
+    <div class="document-topline">
+      <span class="document-badge">{label.singular}</span>
+      {pinned && <span class="announcement-pin-badge">★ Mahalagang Anunsyo</span>}
+    </div>
+    <p class="document-number">{item.number || label.singular}</p>
+    <h3>{item.title}</h3>
+    <p>{item.description || label.defaultDescription}</p>
+    <div class="document-meta">
+      <span>{formatDate(item.date)}</span>
+      {
+        hasPage ? (
+          <a class="document-open-button" href={withBase(`/${SECTION_ROUTE[section]}/${item.id}/`)}>
+            {label.readAction}
+          </a>
+        ) : item.url ? (
+          <ExternalAction url={item.url} label={label.externalAction} />
+        ) : (
+          <span class="no-file">{label.noContent}</span>
+        )
+      }
+    </div>
+  </div>
+</article>

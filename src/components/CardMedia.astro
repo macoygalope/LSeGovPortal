@@ -1,0 +1,33 @@
+---
+import { resolveImage } from "../lib/images";
+
+/** Card header: the entry's image (or a fallback image), else its emoji icon. */
+interface Props {
+  image: string;
+  fallbackImage?: string;
+  icon: string;
+  fallbackIcon?: string;
+}
+
+const { image, fallbackImage = "", icon, fallbackIcon = "📄" } = Astro.props;
+const src = await resolveImage(image || fallbackImage, 640);
+const symbol = icon || fallbackIcon;
+---
+
+{
+  src ? (
+    <div class="card-media">
+      <img
+        src={src}
+        alt=""
+        loading="lazy"
+        onerror="this.parentElement.classList.add('image-error');this.remove()"
+      />
+      <span>{symbol}</span>
+    </div>
+  ) : (
+    <div class="card-media image-error">
+      <span>{symbol}</span>
+    </div>
+  )
+}

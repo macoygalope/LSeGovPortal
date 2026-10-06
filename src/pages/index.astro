@@ -1,0 +1,188 @@
+---
+import Layout from "../components/Layout.astro";
+import CardMedia from "../components/CardMedia.astro";
+import DocumentCard from "../components/DocumentCard.astro";
+import ExternalAction from "../components/ExternalAction.astro";
+import FormViewer from "../components/FormViewer.astro";
+import { getEgovData } from "../lib/data";
+import { byAdminOrder, localTodayIso, orderedAnnouncements, sortDocuments } from "../lib/documents";
+import { resolveImage } from "../lib/images";
+import { LABELS } from "../lib/sections";
+import { withBase } from "../lib/url";
+
+const { settings, sections } = await getEgovData();
+
+const forms = [...sections.Forms].sort(byAdminOrder);
+const announcements = orderedAnnouncements(sections.Announcements, localTodayIso()).slice(0, 3);
+const executiveOrders = sortDocuments(sections.ExecutiveOrders).slice(0, 3);
+const resolutions = sortDocuments(sections.Resolutions).slice(0, 3);
+
+const heroImage = await resolveImage(settings.heroImageUrl, 1600);
+const mayorImage = await resolveImage(settings.mayorImageUrl, 640);
+
+const stats = [
+  { id: "formsCount", count: sections.Forms.length, label: "Mga Online na Form" },
+  { id: "announcementCount", count: sections.Announcements.length, label: "Mga Anunsyo" },
+  { id: "ordersCount", count: sections.ExecutiveOrders.length, label: "Executive Orders" },
+  { id: "documentsCount", count: sections.Resolutions.length, label: "Mga Resolusyon" },
+];
+---
+
+<Layout settings={settings}>
+  <main id="top">
+    <section
+      class:list={["hero", { "has-custom-image": heroImage }]}
+      id="heroSection"
+      style={heroImage ? `--hero-image: url("${heroImage}")` : undefined}
+    >
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Pamahalaang Panglungsod ng Los Santos</span>
+          <h1>{settings.heroTitle}</h1>
+          <p>{settings.heroDescription}</p>
+          <div class="hero-actions">
+            <ExternalAction
+              url={settings.meetingUrl}
+              label={settings.meetingButtonLabel}
+              variant="primary"
+              placeholderLabel="Hindi pa magagamit sa kiosk"
+            />
+            <a class="button button-secondary" href="#announcements">Tingnan ang mga Anunsyo</a>
+          </div>
+        </div>
+
+        <aside class="hero-panel">
+          <div class="mayor-photo-wrap">
+            {
+              mayorImage ? (
+                <img id="mayorImage" class="mayor-photo" src={mayorImage} alt="Larawan ng Punong Lungsod" />
+              ) : (
+                <div class="hero-panel-icon">🏛️</div>
+              )
+            }
+          </div>
+          <p class="hero-panel-label">Tanggapan ng Punong Lungsod</p>
+          <h2>{settings.mayorName}</h2>
+          <p>Tapat na paglilingkod. Bukas na pamahalaan. Maayos na lungsod.</p>
+          <div class="status-pill"><span></span> Aktibo ang Portal</div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="quick-stats">
+      <div class="container stats-grid">
+        {stats.map((stat) => <div><strong id={stat.id}>{stat.count}</strong><span>{stat.label}</span></div>)}
+      </div>
+    </section>
+
+    <section class="section" id="forms">
+      <div class="container">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Mga Serbisyong Online</span>
+            <h2>Mga Pampublikong Form</h2>
+          </div>
+          <p>Piliin ang serbisyong kailangan para makita ang mga tagubilin bago buksan ang form.</p>
+        </div>
+        <div class="forms-grid" id="formsGrid">
+          {
+            forms.length ? (
+              forms.map((form) => (
+                <button
+                  class="form-card form-card-button"
+                  type="button"
+                  data-open-form
+                  data-id={form.id}
+                  aria-label={`Tingnan muna ang detalye ng ${form.title}`}
+                >
+                  <CardMedia image={form.image} icon={form.icon} />
+                  <div class="form-card-body">
+                    <h3>{form.title}</h3>
+                    <p>{form.description || "Tingnan muna ang mga tagubilin bago buksan ang opisyal na form."}</p>
+                    <span class="card-link">Tingnan ang Detalye →</span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div class="empty-state">Wala pang pampublikong form na maaaring buksan.</div>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-muted document-section" id="announcements">
+      <div class="container">
+        <div class="section-heading section-heading-actions">
+          <div>
+            <span class="eyebrow">Mula sa Tanggapan ng Punong Lungsod</span>
+            <h2>Mga Anunsyo</h2>
+            <p>Mga pinakahuling pabatid, proyekto, programa, at kaganapan ng Tanggapan ng Punong Lungsod.</p>
+          </div>
+          <a class="button button-secondary" href={withBase("/announcements/")}>Tingnan Lahat →</a>
+        </div>
+        <div class="document-grid" id="announcementGrid">
+          {
+            announcements.length ? (
+              announcements.map(({ item, pinned }) => (
+                <DocumentCard item={item} section="Announcements" pinned={pinned} />
+              ))
+            ) : (
+              <div class="empty-state">{LABELS.Announcements.empty}</div>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section document-section" id="executive-orders">
+      <div class="container">
+        <div class="section-heading section-heading-actions">
+          <div>
+            <span class="eyebrow">Tanggapan ng Punong Lungsod</span>
+            <h2>Executive Orders</h2>
+            <p>Mga opisyal na kautusang inilabas ng Punong Lungsod.</p>
+          </div>
+          <a class="button button-secondary" href={withBase("/executive-orders/")}>Tingnan Lahat →</a>
+        </div>
+        <div class="document-grid" id="executiveGrid">
+          {
+            executiveOrders.length ? (
+              executiveOrders.map((item) => (
+                <DocumentCard item={item} section="ExecutiveOrders" fallbackImage={settings.defaultDocumentImageUrl} />
+              ))
+            ) : (
+              <div class="empty-state">{LABELS.ExecutiveOrders.empty}</div>
+            )
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section document-section" id="resolutions">
+      <div class="container">
+        <div class="section-heading section-heading-actions">
+          <div>
+            <span class="eyebrow">Mga Pasya ng Pamahalaang Panglungsod</span>
+            <h2>Mga Resolusyon</h2>
+            <p>Mga pinagtibay na pasya, patakaran, at opisyal na pagpapasiya ng lungsod.</p>
+          </div>
+          <a class="button button-secondary" href={withBase("/resolutions/")}>Tingnan Lahat →</a>
+        </div>
+        <div class="document-grid" id="resolutionGrid">
+          {
+            resolutions.length ? (
+              resolutions.map((item) => (
+                <DocumentCard item={item} section="Resolutions" fallbackImage={settings.defaultDocumentImageUrl} />
+              ))
+            ) : (
+              <div class="empty-state">{LABELS.Resolutions.empty}</div>
+            )
+          }
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <FormViewer forms={forms} settings={settings} />
+</Layout>

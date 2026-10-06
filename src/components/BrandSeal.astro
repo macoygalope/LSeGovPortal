@@ -1,0 +1,20 @@
+---
+import { resolveImage } from "../lib/images";
+
+/** The round seal in the header/footer: the uploaded logo, else "LS". */
+interface Props {
+  logoUrl: string;
+  alt?: string;
+}
+
+const { logoUrl, alt = "Selyo ng Los Santos" } = Astro.props;
+const logo = await resolveImage(logoUrl, 96);
+---
+
+{
+  logo ? (
+    <span class="brand-seal has-image" aria-hidden="true"><img src={logo} alt={alt} /></span>
+  ) : (
+    <span class="brand-seal" aria-hidden="true">LS</span>
+  )
+}

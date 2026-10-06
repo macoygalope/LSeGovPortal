@@ -1,0 +1,133 @@
+---
+import type { GetStaticPaths } from "astro";
+import Layout from "../../components/Layout.astro";
+import ExternalAction from "../../components/ExternalAction.astro";
+import { getEgovData } from "../../lib/data";
+import { formatDate, formatMemoDate } from "../../lib/format";
+import { resolveImage } from "../../lib/images";
+import { isKiosk } from "../../lib/kiosk";
+import { documentContentToHtml } from "../../lib/markdown";
+import { LABELS, SECTION_ROUTE } from "../../lib/sections";
+import { withBase } from "../../lib/url";
+import { DOCUMENT_SECTIONS, type DocumentSection, type EgovRecord } from "../../lib/types";
+
+// A page exists only for records that have body text. Records with just an
+// external link keep linking out from their card instead.
+export const getStaticPaths = (async () => {
+  const { sections } = await getEgovData();
+  return DOCUMENT_SECTIONS.flatMap((section) =>
+    sections[section]
+      .filter((item) => item.content !== "")
+      .map((item) => ({
+        params: { section: SECTION_ROUTE[section], id: item.id },
+        props: { section, item },
+      })),
+  );
+}) satisfies GetStaticPaths;
+
+interface Props {
+  section: DocumentSection;
+  item: EgovRecord;
+}
+
+const { section, item } = Astro.props;
+const { settings } = await getEgovData();
+const label = LABELS[section];
+const isMemo = section === "Memorandums";
+const archiveHref = withBase(`/${SECTION_ROUTE[section]}/`);
+const body = documentContentToHtml(item.content, { links: !isKiosk });
+
+const cover = await resolveImage(item.image || settings.defaultDocumentImageUrl, 1200);
+
+// Memorandum-only: the global "default document image" is the letterhead for
+// every memorandum, and the signature falls back to the site-wide default.
+const letterhead = isMemo ? await resolveImage(settings.defaultDocumentImageUrl, 1200) : "";
+const signature = isMemo ? await resolveImage(item.signatureImage || settings.defaultSignatureImageUrl, 480) : "";
+const signatoryName = item.signatoryName || settings.defaultSignatoryName || settings.mayorName;
+const signatoryPosition = item.signatoryPosition || settings.defaultSignatoryPosition;
+
+const pageTitle = isMemo ? item.number || "Memorandum" : item.title;
+---
+
+<Layout
+  title={pageTitle}
+  description={item.description || label.defaultDescription}
+  settings={settings}
+  noindex={isMemo}
+  bodyClass="memorandum-detail-body"
+>
+  <main class="memorandum-detail-main">
+    <div class="container memorandum-toolbar">
+      <a class="button button-secondary button-small" href={archiveHref}>← Bumalik sa {label.plural}</a>
+      <div class="memorandum-toolbar-actions">
+        <ExternalAction url={item.url} label={label.externalAction} variant="secondary" />
+        {!isKiosk && <button class="button button-primary button-small" type="button" data-print>I-print</button>}
+      </div>
+    </div>
+
+    <section class="memorandum-reader-stage">
+      {
+        isMemo ? (
+          <article class="official-document memorandum-document">
+            {letterhead && <img class="memorandum-letterhead" src={letterhead} alt="Letterhead ng memorandum" />}
+
+            <header class="memorandum-heading">
+              <span class="eyebrow">Internal na Memorandum</span>
+              <h1>{item.number || "MEMORANDUM"}</h1>
+            </header>
+
+            <div class="memorandum-meta" aria-label="Detalye ng memorandum">
+              <div class="memorandum-meta-row">
+                <span class="memorandum-meta-label">PARA SA</span>
+                <span class="memorandum-meta-colon">:</span>
+                <strong>{item.memoTo || "Mga Kinauukulang Tanggapan"}</strong>
+              </div>
+              <div class="memorandum-meta-row">
+                <span class="memorandum-meta-label">MULA KAY</span>
+                <span class="memorandum-meta-colon">:</span>
+                <strong>{item.memoFrom || "Tanggapan ng Alkalde"}</strong>
+              </div>
+              <div class="memorandum-meta-row">
+                <span class="memorandum-meta-label">PAKSA</span>
+                <span class="memorandum-meta-colon">:</span>
+                <strong>{item.subject || item.title || "Memorandum"}</strong>
+              </div>
+              <div class="memorandum-meta-row">
+                <span class="memorandum-meta-label">PETSA</span>
+                <span class="memorandum-meta-colon">:</span>
+                <strong>{formatMemoDate(item.date)}</strong>
+              </div>
+            </div>
+
+            <div class="memorandum-body official-document-body" set:html={body} />
+
+            <footer class="memorandum-document-footer">
+              <div class="memorandum-signature-block">
+                {signature && <img class="memorandum-signature-image" src={signature} alt="Lagda" />}
+                <strong class="memorandum-signatory-name">{signatoryName}</strong>
+                <span class="memorandum-signatory-position">{signatoryPosition}</span>
+              </div>
+            </footer>
+          </article>
+        ) : (
+          <article class="official-document memorandum-document">
+            {cover && <img class="official-document-cover" src={cover} alt="" />}
+            <div class="official-document-heading">
+              <span class="eyebrow">{item.number || label.singular}</span>
+              <h2>{item.title}</h2>
+              <p>{formatDate(item.date)}</p>
+            </div>
+            <div class="official-document-body" set:html={body} />
+            <div class="official-document-footer">
+              <p>Tanggapan ng Punong Lungsod<br /><strong>{settings.mayorName}</strong></p>
+            </div>
+          </article>
+        )
+      }
+    </section>
+  </main>
+
+  <script>
+    document.querySelector("[data-print]")?.addEventListener("click", () => window.print());
+  </script>
+</Layout>

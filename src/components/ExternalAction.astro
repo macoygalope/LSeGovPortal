@@ -1,0 +1,36 @@
+---
+import { isKiosk } from "../lib/kiosk";
+import { safeUrl } from "../lib/format";
+
+/**
+ * A link out to an external site (Google Form, booking calendar, signed
+ * copy). On the kiosk build it renders a disabled placeholder instead, since
+ * the kiosk screen can't be assumed to open external sites; built-in forms
+ * will replace these later.
+ */
+interface Props {
+  url: string;
+  label: string;
+  /** "link" = plain text link (cards); "primary"/"secondary" = buttons. */
+  variant?: "link" | "primary" | "secondary";
+  placeholderLabel?: string;
+  id?: string;
+}
+
+const { url, label, variant = "link", placeholderLabel = "Hindi pa magagamit sa kiosk", id } = Astro.props;
+const href = safeUrl(url);
+const buttonClass = variant === "link" ? "" : `button button-${variant}`;
+---
+
+{
+  href &&
+    (isKiosk ? (
+      variant === "link" ? (
+        <span class="external-placeholder" id={id}>{placeholderLabel}</span>
+      ) : (
+        <span class={`${buttonClass} is-disabled`} id={id} aria-disabled="true">{placeholderLabel}</span>
+      )
+    ) : (
+      <a class={buttonClass || undefined} id={id} href={href} target="_blank" rel="noopener noreferrer">{label}</a>
+    ))
+}

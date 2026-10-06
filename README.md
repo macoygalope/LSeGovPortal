@@ -1,174 +1,102 @@
-# Los Santos eGov — GitHub Pages + Google Sheets CMS
+# Los Santos eGov
 
-Isang responsive na website para sa Pamahalaang Panglungsod ng Los Santos. Gumagamit ito ng GitHub Pages para sa public website at Google Sheets + Apps Script bilang simpleng backend.
+The Los Santos city-government portal: online forms, announcements, executive
+orders, resolutions and memorandums. Built with [Astro](https://astro.build) as
+a static site. Content is managed in a Google Sheet through an Apps Script
+backend and **baked into the pages at build time**, so the site makes no data
+requests when it loads.
 
-## Pangunahing feature
+It has two build targets:
 
-- Mga pampublikong Google Form links
-- Mga anunsyo
-- Internal full-document reader para sa:
-  - Executive Orders
-  - Mga Memorandum
-  - Mga Resolusyon
-- Hiwalay na archive page para sa bawat uri ng dokumento
-- Search at pagination sa archive pages
-- Tig-tatlong pinakabagong dokumento lamang sa homepage
-- Admin dashboard para sa pagdagdag, pag-edit, pag-publish, at pagtanggal
-- Image management gamit ang public image URLs o Google Drive share links
-- Mobile at desktop responsive layout
-- Print-ready internal document view
+| Command | Served from | Contains |
+|---|---|---|
+| `npm run build:kiosk` | `lspd-backend` at `/api/v1/websites/egov`, on in-game kiosk screens | The public site only |
+| `npm run build` | A domain root (e.g. GitHub Pages) | The public site plus `/admin` |
 
-## Mga page
+The kiosk build has **no admin page, no outbound links and no print buttons**.
+Links to Google Forms, the booking calendar and signed copies become disabled
+"coming soon" placeholders until built-in forms exist, and links inside
+document bodies render as plain text. See `src/lib/kiosk.ts`.
 
-- `index.html` — pangunahing pahina
-- `executive-orders.html` — lahat ng Executive Orders
-- `memorandums.html` — lahat ng memorandum
-- `resolutions.html` — lahat ng resolusyon
-- `admin.html` — pribadong content dashboard
+## Setup
 
-## Mga image na maaaring palitan sa dashboard
-
-Sa tab na **Mga Larawan at Ayos**, maaaring palitan ang:
-
-- Logo o selyo
-- Larawan ng Punong Lungsod
-- Background ng hero section
-- Default na larawan ng dokumento
-- Pangalan at subtitle ng portal
-- Pangunahing headline at description
-- Pangalan ng Punong Lungsod
-- Footer text
-
-May sarili ring **Link ng Larawan** field ang bawat form, anunsyo, Executive Order, memorandum, at resolusyon.
-
-> Dapat naka-public ang image link. Suportado ang normal na direct image URL at public Google Drive share link.
-
----
-
-# Pag-set up ng Google Sheets backend
-
-## 1. Gumawa ng Google Sheet
-
-1. Gumawa ng bagong blank Google Sheet.
-2. Buksan ang **Extensions → Apps Script**.
-3. Burahin ang sample code.
-4. I-paste ang laman ng `google-apps-script/Code.gs`.
-5. I-save ang project.
-6. Piliin ang function na `setupSheets`.
-7. Pindutin ang **Run** at aprubahan ang permissions.
-
-Awtomatikong gagawin o ia-update ng script ang mga tab na ito:
-
-- `Forms`
-- `Announcements`
-- `ExecutiveOrders`
-- `Memorandums`
-- `Resolutions`
-- `Settings`
-
-Hindi buburahin ng `setupSheets()` ang kasalukuyang records. Idaragdag lamang nito ang mga bagong column na kulang, gaya ng `image` at `content`.
-
-## 2. Magtakda ng admin token
-
-Sa Apps Script editor, patakbuhin nang isang beses:
-
-```javascript
-setAdminToken("ILAGAY_DITO_ANG_MAHABA_AT_LIHIM_NA_TOKEN")
+```sh
+npm install
+cp .env.example .env      # set PUBLIC_EGOV_API_URL to the Apps Script /exec URL
+npm run dev               # live data, http://localhost:4321
 ```
 
-Gumamit ng token na hindi bababa sa 16 characters. Huwag ilagay ang token sa public GitHub files.
+Node 22.12 or newer.
 
-## 3. I-deploy bilang Web App
+## Building and deploying to a kiosk
 
-1. Pindutin ang **Deploy → New deployment**.
-2. Piliin ang **Web app**.
-3. **Execute as:** Me
-4. **Who has access:** Anyone
-5. Pindutin ang **Deploy**.
-6. Kopyahin ang URL na nagtatapos sa `/exec`.
-
-Sa `config.js`, palitan ang:
-
-```javascript
-API_URL: "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE"
+```sh
+npm run build:kiosk
 ```
 
-ng iyong Apps Script `/exec` URL.
+Then copy the contents of `dist/` into `lspd-backend/websites/egov/`.
 
-Kapag binago ang `Code.gs`, i-update ang deployment at gumawa ng bagong version.
+The first time only, register the site so kiosks can pick it from the
+`/spawnprop` Website dropdown:
 
----
-
-# Paggamit ng Admin Dashboard
-
-Buksan ang:
-
-```text
-https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPOSITORY/admin.html
+```
+POST /api/v1/internal/websites
+X-Internal-Api-Key: <INTERNAL_API_KEY>
+{"slug": "egov", "name": "Los Santos eGov", "type": "static"}
 ```
 
-Ilagay ang admin token.
+**Content only changes when you rebuild.** After publishing something in the
+admin, run `npm run build:kiosk` and copy `dist/` again. A scheduled rebuild is
+also needed for pinned announcements that have an expiry date, because the pin
+is evaluated at build time.
 
-## Para sa mga dokumento
+A build fails if the backend can't be reached. The wrapper in
+`scripts/build.mjs` builds into `.build/` and only swaps it into `dist/` on
+success, so a failed build never leaves you with a half-written `dist/` to
+copy.
 
-Sa Executive Orders, Memorandums, at Resolutions:
+To build from a saved response instead of the live backend:
 
-- **Pamagat** — pangalan ng dokumento
-- **Maikling Paglalarawan** — summary na makikita sa card
-- **Buong Nilalaman ng Dokumento** — buong tekstong mababasa sa internal reader
-- **Numero o Sanggunian** — halimbawa: `Executive Order Blg. 07, Serye ng 2026`
-- **Petsa**
-- **Link ng Larawan** — optional document cover
-- **External Link** — optional signed PDF o Google Drive file
-- **Ayos ng Pagkakasunod**
-- **Ilathala sa website**
-
-Sinusuportahan ang mahahabang dokumento hanggang 45,000 characters. Awtomatikong hinahati ng dashboard ang upload para hindi lumampas sa Apps Script URL limit.
-
----
-
-# Pag-publish sa GitHub Pages
-
-1. Gumawa ng GitHub repository.
-2. I-upload ang lahat ng files at folders.
-3. I-commit ang changes.
-4. Buksan ang **Settings → Pages**.
-5. Piliin:
-   - Source: `Deploy from a branch`
-   - Branch: `main`
-   - Folder: `/root`
-6. I-save.
-
-Public website:
-
-```text
-https://YOUR-GITHUB-USERNAME.github.io/YOUR-REPOSITORY/
+```sh
+EGOV_DATA_FILE=fixtures/live-all.json npm run build:kiosk
 ```
 
----
+## Layout
 
-# Mahalagang tala sa seguridad
-
-Ang dashboard ay gumagamit ng pribadong token at JSONP requests para makakonekta ang GitHub Pages sa Google Apps Script.
-
-Ang setup na ito ay praktikal para sa GTA RP community website, ngunit ang sinumang makaalam ng admin URL at token ay maaaring mag-edit ng content. Gumamit ng mahaba at lihim na token, at huwag ilagay ang `admin.html` link sa public navigation.
-
-Para sa mas mataas na antas ng seguridad, kailangang gumamit ng Google OAuth o account-based Apps Script web application.
-
----
-
-# Local preview
-
-Sa project folder:
-
-```bash
-python -m http.server 8000
+```
+src/
+  pages/
+    index.astro            home
+    [section]/index.astro  archive: search, sort, pagination
+    [section]/[id].astro   one page per document (memorandums get the formal layout)
+  admin/                   dashboard, non-kiosk build only (admin.js is still plain JS)
+  components/              Layout, DocumentCard, FormViewer, ExternalAction, ...
+  lib/                     data loading, normalising, sorting, markdown, image handling
+  scripts/                 small client scripts: form pop-out, archive search/sort
+  styles/global.css
+google-apps-script/Code.gs the sheet backend (see the warning below)
+fixtures/live-all.json     a saved backend response, used by the tests
+legacy/                    the previous static site, kept for reference
 ```
 
-Pagkatapos ay buksan:
+## Tests
 
-```text
-http://localhost:8000
+```sh
+npm test         # unit tests: normalising, sorting, numbering, pins, markdown
+npm run check    # type-check
 ```
 
-Kapag hindi pa nailalagay ang Apps Script URL, preview content muna ang ipapakita ng website.
+## Things to know
+
+- **`google-apps-script/Code.gs` is out of date.** The deployed backend returns
+  fields this copy doesn't know about (pinned announcements, auto-numbering,
+  memorandum fields, `uploadStatus`). The site is built against the *deployed*
+  backend. Don't redeploy from this copy without updating it first.
+- **Images are downloaded at build time** from the host in `image.domains`
+  (`astro.config.mjs`), resized and converted to WebP. Add a new image host there.
+- **Archive search covers full document text**, which is embedded in each card.
+  That is fine at a few dozen documents; move to a separate search index if the
+  archive grows into the hundreds.
+- **Archive pages need JavaScript** to show anything past page 1.
+- `dist/404.html` is built but `lspd-backend` doesn't serve it; unknown paths
+  get its JSON 404.

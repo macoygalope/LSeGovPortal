@@ -1,0 +1,135 @@
+---
+import type { GetStaticPaths } from "astro";
+import Layout from "../../components/Layout.astro";
+import DocumentCard from "../../components/DocumentCard.astro";
+import { getEgovData } from "../../lib/data";
+import {
+  SORT_MODES,
+  localTodayIso,
+  orderedAnnouncements,
+  sortDocuments,
+  type SortMode,
+} from "../../lib/documents";
+import { ARCHIVE_COPY, LABELS, SECTION_ROUTE } from "../../lib/sections";
+import { withBase } from "../../lib/url";
+import { DOCUMENT_SECTIONS, type DocumentSection } from "../../lib/types";
+
+export const getStaticPaths = (() =>
+  DOCUMENT_SECTIONS.map((section) => ({
+    params: { section: SECTION_ROUTE[section] },
+    props: { section },
+  }))) satisfies GetStaticPaths;
+
+interface Props {
+  section: DocumentSection;
+}
+
+const PAGE_SIZE = 9;
+const { section } = Astro.props;
+const { settings, sections } = await getEgovData();
+const copy = ARCHIVE_COPY[section];
+const label = LABELS[section];
+const items = sections[section];
+
+// Announcements keep their pinned-first order and have no sort control; the
+// other archives are sortable.
+const sortable = section !== "Announcements";
+
+let cards: { item: (typeof items)[number]; pinned: boolean; ranks: Record<string, number> }[];
+if (section === "Announcements") {
+  const ordered = orderedAnnouncements(items, localTodayIso());
+  cards = ordered.map(({ item, pinned }, index) => ({ item, pinned, ranks: { newest: index } }));
+} else {
+  // Rank every card under every sort mode now, so the browser only has to
+  // order by a precomputed number and carries no sorting logic of its own.
+  const ranksById = new Map<string, Record<string, number>>(items.map((item) => [item.id, {}]));
+  for (const mode of SORT_MODES as readonly SortMode[]) {
+    sortDocuments(items, mode).forEach((item, index) => {
+      ranksById.get(item.id)![mode] = index;
+    });
+  }
+  cards = sortDocuments(items, "newest").map((item) => ({
+    item,
+    pinned: false,
+    ranks: ranksById.get(item.id)!,
+  }));
+}
+---
+
+<Layout
+  title={copy.heading}
+  description={copy.intro}
+  settings={settings}
+  noindex={section === "Memorandums"}
+>
+  <main>
+    <section class="page-hero">
+      <div class="container">
+        <a class="back-link" href={withBase("/")}>← Bumalik sa Unang Pahina</a>
+        <span class="eyebrow">{copy.eyebrow}</span>
+        <h1>{copy.heading}</h1>
+        <p>{copy.intro}</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div
+        class="container"
+        data-archive
+        data-page-size={PAGE_SIZE}
+        data-count-singular={label.countSingular}
+        data-count-plural={label.countPlural}
+        data-search-empty={label.searchEmpty}
+      >
+        <div class="archive-toolbar">
+          <label class="archive-search">
+            <span>{copy.searchLabel}</span>
+            <input id="archiveSearch" type="search" placeholder={copy.searchPlaceholder} />
+          </label>
+          <div class="archive-controls">
+            {
+              sortable && (
+                <label class="archive-sort">
+                  <span>Ayusin ayon sa</span>
+                  <select id="archiveSort">
+                    <option value="newest">Pinakabago</option>
+                    <option value="oldest">Pinakaluma</option>
+                    <option value="numberAsc">Numero — Pataas</option>
+                    <option value="numberDesc">Numero — Pababa</option>
+                  </select>
+                </label>
+              )
+            }
+            <div class="archive-count" id="archiveCount">
+              {cards.length} {cards.length === 1 ? label.countSingular : label.countPlural}
+            </div>
+          </div>
+        </div>
+
+        <div class="document-grid" id="archiveGrid" data-archive-grid>
+          {
+            cards.map(({ item, pinned, ranks }, index) => (
+              <DocumentCard
+                item={item}
+                section={section}
+                fallbackImage={settings.defaultDocumentImageUrl}
+                pinned={pinned}
+                ranks={ranks}
+                position={index}
+                hidden={index >= PAGE_SIZE}
+              />
+            ))
+          }
+          <div class:list={["empty-state", { hidden: cards.length > 0 }]} data-archive-empty>
+            {cards.length ? label.searchEmpty : label.empty}
+          </div>
+        </div>
+        <nav class="pagination" id="pagination" aria-label="Mga pahina" data-archive-pagination></nav>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    import "../../scripts/archive.ts";
+  </script>
+</Layout>

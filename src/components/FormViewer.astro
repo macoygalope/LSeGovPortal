@@ -1,0 +1,81 @@
+---
+import { documentContentToHtml } from "../lib/markdown";
+import { isKiosk } from "../lib/kiosk";
+import { resolveImage } from "../lib/images";
+import { withBase } from "../lib/url";
+import type { EgovRecord, SiteSettings } from "../lib/types";
+import BrandSeal from "./BrandSeal.astro";
+import ExternalAction from "./ExternalAction.astro";
+
+/**
+ * The instructions pop-out that opens when a form card is clicked, before the
+ * external Google Form link. Each form's full content is rendered at build
+ * time into an inert <template>; src/scripts/form-viewer.ts clones the right
+ * one into the dialog on click, so no data is fetched at runtime.
+ */
+interface Props {
+  forms: EgovRecord[];
+  settings: SiteSettings;
+}
+
+const { forms, settings } = Astro.props;
+const covers = await Promise.all(forms.map((form) => resolveImage(form.image, 1200)));
+---
+
+<div class="document-viewer form-viewer-mode" id="documentViewer" aria-hidden="true">
+  <div class="document-viewer-backdrop" data-close-viewer></div>
+  <article class="document-viewer-page" role="dialog" aria-modal="true" aria-labelledby="viewerTitle">
+    <header class="viewer-header">
+      <a class="brand" href={withBase("/")}>
+        <BrandSeal logoUrl={settings.logoUrl} />
+        <span>
+          <strong>Pamahalaang Panglungsod ng Los Santos</strong>
+          <small>Online na Form</small>
+        </span>
+      </a>
+      <div class="viewer-actions">
+        <button class="viewer-close" id="closeDocumentViewer" type="button" aria-label="Isara ang detalye">×</button>
+      </div>
+    </header>
+    <div class="viewer-scroll">
+      <div class="official-document" id="viewerDocument"></div>
+    </div>
+  </article>
+</div>
+
+{
+  forms.map((form, index) => (
+    <template data-form-id={form.id}>
+      {covers[index] && <img class="official-document-cover" src={covers[index]} alt={`Larawan para sa ${form.title}`} />}
+      <div class="official-document-heading">
+        <span class="eyebrow">Serbisyong Online</span>
+        <h2 id="viewerTitle">{form.title}</h2>
+      </div>
+      <div
+        class="official-document-body"
+        set:html={documentContentToHtml(
+          form.content || form.description || "Basahin ang mga detalye bago buksan ang form.",
+          { links: !isKiosk },
+        )}
+      />
+      <div class="official-document-footer">
+        {isKiosk && form.url && (
+          <p class="external-placeholder-note">
+            Ang online na form na ito ay idadagdag sa kiosk sa lalong madaling panahon.
+          </p>
+        )}
+        <ExternalAction
+          id="viewerExternalLink"
+          url={form.url}
+          label="Buksan ang Form"
+          variant="primary"
+          placeholderLabel="Malapit nang magamit"
+        />
+      </div>
+    </template>
+  ))
+}
+
+<script>
+  import "../scripts/form-viewer.ts";
+</script>
