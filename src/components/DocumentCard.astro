@@ -1,5 +1,6 @@
 ---
-import { formatDate } from "../lib/format";
+import { dateAttrs, formatDate } from "../lib/format";
+import { i18n, t } from "../lib/i18n";
 import { LABELS, SECTION_ROUTE } from "../lib/sections";
 import { withBase } from "../lib/url";
 import type { DocumentSection, EgovRecord } from "../lib/types";
@@ -40,23 +41,23 @@ const rankAttrs = ranks
   <CardMedia image={item.image} fallbackImage={fallbackImage} icon={item.icon} />
   <div class="document-card-body">
     <div class="document-topline">
-      <span class="document-badge">{label.singular}</span>
-      {pinned && <span class="announcement-pin-badge">★ Mahalagang Anunsyo</span>}
+      <span class="document-badge" {...i18n(label.singular)}>{t(label.singular)}</span>
+      {pinned && <span class="announcement-pin-badge" {...i18n("doc.pinnedBadge")}>{t("doc.pinnedBadge")}</span>}
     </div>
-    <p class="document-number">{item.number || label.singular}</p>
+    <p class="document-number" {...(item.number ? {} : i18n(label.singular))}>{item.number || t(label.singular)}</p>
     <h3>{item.title}</h3>
-    <p>{item.description || label.defaultDescription}</p>
+    <p {...(item.description ? {} : i18n(label.defaultDescription))}>{item.description || t(label.defaultDescription)}</p>
     <div class="document-meta">
-      <span>{formatDate(item.date)}</span>
+      <span {...dateAttrs(item.date)}>{formatDate(item.date)}</span>
       {
         hasPage ? (
-          <a class="document-open-button" href={withBase(`/${SECTION_ROUTE[section]}/${item.id}/`)}>
-            {label.readAction}
+          <a class="document-open-button" href={withBase(`/${SECTION_ROUTE[section]}/${item.id}/`)} {...i18n(label.readAction)}>
+            {t(label.readAction)}
           </a>
         ) : item.url ? (
-          <ExternalAction url={item.url} label={label.externalAction} />
+          <ExternalAction url={item.url} labelKey={label.externalAction} />
         ) : (
-          <span class="no-file">{label.noContent}</span>
+          <span class="no-file" {...i18n(label.noContent)}>{t(label.noContent)}</span>
         )
       }
     </div>

@@ -3,7 +3,8 @@ import type { GetStaticPaths } from "astro";
 import Layout from "../../components/Layout.astro";
 import ExternalAction from "../../components/ExternalAction.astro";
 import { getEgovData } from "../../lib/data";
-import { formatDate, formatMemoDate } from "../../lib/format";
+import { dateAttrs, formatDate, formatMemoDate } from "../../lib/format";
+import { i18n, i18nAttr, settingI18n, t, type MessageKey } from "../../lib/i18n";
 import { resolveImage } from "../../lib/images";
 import { isKiosk } from "../../lib/kiosk";
 import { documentContentToHtml } from "../../lib/markdown";
@@ -46,22 +47,40 @@ const signature = isMemo ? await resolveImage(item.signatureImage || settings.de
 const signatoryName = item.signatoryName || settings.defaultSignatoryName || settings.mayorName;
 const signatoryPosition = item.signatoryPosition || settings.defaultSignatoryPosition;
 
-const pageTitle = isMemo ? item.number || "Memorandum" : item.title;
+// Titles and descriptions written by staff are shown as written; only the
+// fallbacks used when they're missing follow the chosen language.
+const pageTitle = isMemo ? item.number : item.title;
+const pageTitleKey = pageTitle ? undefined : label.singular;
+
+// Each memorandum header line: the value staff entered, else a default.
+const memoRows = [
+  { label: "memo.to", value: item.memoTo, fallback: "memo.toDefault" },
+  { label: "memo.from", value: item.memoFrom, fallback: "memo.fromDefault" },
+  { label: "memo.subject", value: item.subject || item.title, fallback: "section.Memorandums.singular" },
+] as const satisfies { label: MessageKey; value: string; fallback: MessageKey }[];
 ---
 
 <Layout
-  title={pageTitle}
-  description={item.description || label.defaultDescription}
+  title={pageTitle || undefined}
+  titleKey={pageTitleKey}
+  description={item.description || undefined}
+  descriptionKey={label.defaultDescription}
   settings={settings}
   noindex={isMemo}
   bodyClass="memorandum-detail-body"
 >
   <main class="memorandum-detail-main">
     <div class="container memorandum-toolbar">
-      <a class="button button-secondary button-small" href={archiveHref}>← Bumalik sa {label.plural}</a>
+      <a class="button button-secondary button-small" href={archiveHref} {...i18n(label.back)}>{t(label.back)}</a>
       <div class="memorandum-toolbar-actions">
-        <ExternalAction url={item.url} label={label.externalAction} variant="secondary" />
-        {!isKiosk && <button class="button button-primary button-small" type="button" data-print>I-print</button>}
+        <ExternalAction url={item.url} labelKey={label.externalAction} variant="secondary" />
+        {
+          !isKiosk && (
+            <button class="button button-primary button-small" type="button" data-print {...i18n("doc.print")}>
+              {t("doc.print")}
+            </button>
+          )
+        }
       </div>
     </div>
 
@@ -69,33 +88,36 @@ const pageTitle = isMemo ? item.number || "Memorandum" : item.title;
       {
         isMemo ? (
           <article class="official-document memorandum-document">
-            {letterhead && <img class="memorandum-letterhead" src={letterhead} alt="Letterhead ng memorandum" />}
+            {letterhead && (
+              <img
+                class="memorandum-letterhead"
+                src={letterhead}
+                alt={t("memo.letterheadAlt")}
+                {...i18nAttr({ alt: "memo.letterheadAlt" })}
+              />
+            )}
 
             <header class="memorandum-heading">
-              <span class="eyebrow">Internal na Memorandum</span>
+              <span class="eyebrow" {...i18n("memo.eyebrow")}>{t("memo.eyebrow")}</span>
               <h1>{item.number || "MEMORANDUM"}</h1>
             </header>
 
-            <div class="memorandum-meta" aria-label="Detalye ng memorandum">
+            <div
+              class="memorandum-meta"
+              aria-label={t("memo.detailsAria")}
+              {...i18nAttr({ "aria-label": "memo.detailsAria" })}
+            >
+              {memoRows.map((row) => (
+                <div class="memorandum-meta-row">
+                  <span class="memorandum-meta-label" {...i18n(row.label)}>{t(row.label)}</span>
+                  <span class="memorandum-meta-colon">:</span>
+                  <strong {...(row.value ? {} : i18n(row.fallback))}>{row.value || t(row.fallback)}</strong>
+                </div>
+              ))}
               <div class="memorandum-meta-row">
-                <span class="memorandum-meta-label">PARA SA</span>
+                <span class="memorandum-meta-label" {...i18n("memo.date")}>{t("memo.date")}</span>
                 <span class="memorandum-meta-colon">:</span>
-                <strong>{item.memoTo || "Mga Kinauukulang Tanggapan"}</strong>
-              </div>
-              <div class="memorandum-meta-row">
-                <span class="memorandum-meta-label">MULA KAY</span>
-                <span class="memorandum-meta-colon">:</span>
-                <strong>{item.memoFrom || "Tanggapan ng Alkalde"}</strong>
-              </div>
-              <div class="memorandum-meta-row">
-                <span class="memorandum-meta-label">PAKSA</span>
-                <span class="memorandum-meta-colon">:</span>
-                <strong>{item.subject || item.title || "Memorandum"}</strong>
-              </div>
-              <div class="memorandum-meta-row">
-                <span class="memorandum-meta-label">PETSA</span>
-                <span class="memorandum-meta-colon">:</span>
-                <strong>{formatMemoDate(item.date)}</strong>
+                <strong {...dateAttrs(item.date, "memo")}>{formatMemoDate(item.date)}</strong>
               </div>
             </div>
 
@@ -103,9 +125,23 @@ const pageTitle = isMemo ? item.number || "Memorandum" : item.title;
 
             <footer class="memorandum-document-footer">
               <div class="memorandum-signature-block">
-                {signature && <img class="memorandum-signature-image" src={signature} alt="Lagda" />}
+                {
+                  signature && (
+                    <img
+                      class="memorandum-signature-image"
+                      src={signature}
+                      alt={t("memo.signatureAlt")}
+                      {...i18nAttr({ alt: "memo.signatureAlt" })}
+                    />
+                  )
+                }
                 <strong class="memorandum-signatory-name">{signatoryName}</strong>
-                <span class="memorandum-signatory-position">{signatoryPosition}</span>
+                <span
+                  class="memorandum-signatory-position"
+                  {...(item.signatoryPosition ? {} : settingI18n("defaultSignatoryPosition", signatoryPosition))}
+                >
+                  {signatoryPosition}
+                </span>
               </div>
             </footer>
           </article>
@@ -113,13 +149,18 @@ const pageTitle = isMemo ? item.number || "Memorandum" : item.title;
           <article class="official-document memorandum-document">
             {cover && <img class="official-document-cover" src={cover} alt="" />}
             <div class="official-document-heading">
-              <span class="eyebrow">{item.number || label.singular}</span>
+              <span class="eyebrow" {...(item.number ? {} : i18n(label.singular))}>
+                {item.number || t(label.singular)}
+              </span>
               <h2>{item.title}</h2>
-              <p>{formatDate(item.date)}</p>
+              <p {...dateAttrs(item.date)}>{formatDate(item.date)}</p>
             </div>
             <div class="official-document-body" set:html={body} />
             <div class="official-document-footer">
-              <p>Tanggapan ng Punong Lungsod<br /><strong>{settings.mayorName}</strong></p>
+              <p>
+                <span {...i18n("home.mayorOffice")}>{t("home.mayorOffice")}</span><br />
+                <strong>{settings.mayorName}</strong>
+              </p>
             </div>
           </article>
         )

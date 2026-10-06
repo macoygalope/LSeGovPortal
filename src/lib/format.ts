@@ -1,3 +1,5 @@
+import { DEFAULT_LANG, translate, type Lang, type MessageKey } from "./i18n.ts";
+
 export function escapeHtml(value: unknown): string {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -7,9 +9,9 @@ export function escapeHtml(value: unknown): string {
     .replaceAll("'", "&#039;");
 }
 
-const MONTHS = [
-  "Enero", "Pebrero", "Marso", "Abril", "Mayo", "Hunyo",
-  "Hulyo", "Agosto", "Setyembre", "Oktubre", "Nobyembre", "Disyembre",
+const MONTH_KEYS: MessageKey[] = [
+  "month.1", "month.2", "month.3", "month.4", "month.5", "month.6",
+  "month.7", "month.8", "month.9", "month.10", "month.11", "month.12",
 ];
 
 function parseIsoDate(value: string): Date | null {
@@ -18,20 +20,29 @@ function parseIsoDate(value: string): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/** "5 Agosto 2026" — used on cards and document headings. */
-export function formatDate(value: string): string {
-  if (!value) return "Walang nakatalang petsa";
+export type DateStyle = "long" | "memo";
+
+/**
+ * "5 Agosto 2026" (long, on cards and document headings) or
+ * "Agosto 5, 2026" (memo, the memorandum PETSA line). English reads
+ * "5 August 2026" and "August 5, 2026".
+ */
+export function formatDateStyle(value: string, style: DateStyle, lang: Lang = DEFAULT_LANG): string {
+  if (!value) return translate(lang, "date.none");
   const date = parseIsoDate(value);
   if (!date) return value;
-  return `${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+  const month = translate(lang, MONTH_KEYS[date.getMonth()]);
+  return style === "memo"
+    ? `${month} ${date.getDate()}, ${date.getFullYear()}`
+    : `${date.getDate()} ${month} ${date.getFullYear()}`;
 }
 
-/** "Agosto 5, 2026" — the memorandum PETSA line. */
-export function formatMemoDate(value: string): string {
-  if (!value) return "Walang nakatalang petsa";
-  const date = parseIsoDate(value);
-  if (!date) return value;
-  return `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+export const formatDate = (value: string, lang: Lang = DEFAULT_LANG) => formatDateStyle(value, "long", lang);
+export const formatMemoDate = (value: string, lang: Lang = DEFAULT_LANG) => formatDateStyle(value, "memo", lang);
+
+/** Lets the browser re-format a date when the language changes. */
+export function dateAttrs(value: string, style: DateStyle = "long"): Record<string, string> {
+  return { "data-date": value, "data-date-style": style };
 }
 
 /** Only http(s) links survive; anything else becomes "". */

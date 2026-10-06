@@ -3,6 +3,9 @@
 // visible and in what order. Sort positions are precomputed at build time as
 // data-rank-<mode>, so there is no sorting logic to keep in sync here.
 
+import type { MessageKey } from "../lib/i18n.ts";
+import { onLangChange, t } from "./i18n.ts";
+
 const root = document.querySelector<HTMLElement>("[data-archive]");
 
 if (root) {
@@ -15,7 +18,11 @@ if (root) {
   const cards = Array.from(grid.querySelectorAll<HTMLElement>("[data-card]"));
 
   const pageSize = Number(root.dataset.pageSize) || 9;
-  const { countSingular = "", countPlural = "", searchEmpty = "" } = root.dataset;
+  // The page carries message keys, not text, so the labels follow the language.
+  const { countSingularKey, countPluralKey, emptyKey, searchEmptyKey } = root.dataset as Record<
+    "countSingularKey" | "countPluralKey" | "emptyKey" | "searchEmptyKey",
+    MessageKey
+  >;
   const SORT_MODES = ["newest", "oldest", "numberAsc", "numberDesc"];
 
   const params = new URLSearchParams(window.location.search);
@@ -51,7 +58,7 @@ if (root) {
       return el;
     };
 
-    pagination.append(button("← Nauna", page - 1, { disabled: page === 1 }));
+    pagination.append(button(t("archive.prev"), page - 1, { disabled: page === 1 }));
     for (const p of pageNumbers(page, totalPages)) {
       if (p === "…") {
         const gap = document.createElement("span");
@@ -62,7 +69,7 @@ if (root) {
         pagination.append(button(String(p), p, { active: p === page }));
       }
     }
-    pagination.append(button("Susunod →", page + 1, { disabled: page === totalPages }));
+    pagination.append(button(t("archive.next"), page + 1, { disabled: page === totalPages }));
   }
 
   function syncUrl() {
@@ -89,8 +96,9 @@ if (root) {
       grid.insertBefore(card, emptyState);
     }
 
-    count.textContent = `${matches.length} ${matches.length === 1 ? countSingular : countPlural}`;
-    emptyState.textContent = searchEmpty;
+    count.textContent = `${matches.length} ${t(matches.length === 1 ? countSingularKey : countPluralKey)}`;
+    // Nothing published at all vs. nothing matching the search.
+    emptyState.textContent = t(cards.length ? searchEmptyKey : emptyKey);
     emptyState.classList.toggle("hidden", matches.length > 0);
     renderPagination(totalPages);
     syncUrl();
@@ -116,5 +124,6 @@ if (root) {
     render();
   });
 
+  onLangChange(render);
   render();
 }

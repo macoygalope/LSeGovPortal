@@ -6,8 +6,9 @@ import ExternalAction from "../components/ExternalAction.astro";
 import FormViewer from "../components/FormViewer.astro";
 import { getEgovData } from "../lib/data";
 import { byAdminOrder, localTodayIso, orderedAnnouncements, sortDocuments } from "../lib/documents";
+import { i18n, i18nAttr, settingI18n, settingKey, t, type MessageKey } from "../lib/i18n";
 import { resolveImage } from "../lib/images";
-import { LABELS } from "../lib/sections";
+import { ARCHIVE_COPY, LABELS } from "../lib/sections";
 import { withBase } from "../lib/url";
 
 const { settings, sections } = await getEgovData();
@@ -20,11 +21,11 @@ const resolutions = sortDocuments(sections.Resolutions).slice(0, 3);
 const heroImage = await resolveImage(settings.heroImageUrl, 1600);
 const mayorImage = await resolveImage(settings.mayorImageUrl, 640);
 
-const stats = [
-  { id: "formsCount", count: sections.Forms.length, label: "Mga Online na Form" },
-  { id: "announcementCount", count: sections.Announcements.length, label: "Mga Anunsyo" },
-  { id: "ordersCount", count: sections.ExecutiveOrders.length, label: "Executive Orders" },
-  { id: "documentsCount", count: sections.Resolutions.length, label: "Mga Resolusyon" },
+const stats: { id: string; count: number; label: MessageKey }[] = [
+  { id: "formsCount", count: sections.Forms.length, label: "home.stat.forms" },
+  { id: "announcementCount", count: sections.Announcements.length, label: LABELS.Announcements.plural },
+  { id: "ordersCount", count: sections.ExecutiveOrders.length, label: LABELS.ExecutiveOrders.plural },
+  { id: "documentsCount", count: sections.Resolutions.length, label: LABELS.Resolutions.plural },
 ];
 ---
 
@@ -37,17 +38,19 @@ const stats = [
     >
       <div class="container hero-grid">
         <div class="hero-copy">
-          <span class="eyebrow">Pamahalaang Panglungsod ng Los Santos</span>
-          <h1>{settings.heroTitle}</h1>
-          <p>{settings.heroDescription}</p>
+          <span class="eyebrow" {...i18n("home.eyebrow")}>{t("home.eyebrow")}</span>
+          <h1 {...settingI18n("heroTitle", settings.heroTitle)}>{settings.heroTitle}</h1>
+          <p {...settingI18n("heroDescription", settings.heroDescription)}>{settings.heroDescription}</p>
           <div class="hero-actions">
             <ExternalAction
               url={settings.meetingUrl}
               label={settings.meetingButtonLabel}
+              labelKey={settingKey("meetingButtonLabel", settings.meetingButtonLabel)}
               variant="primary"
-              placeholderLabel="Hindi pa magagamit sa kiosk"
             />
-            <a class="button button-secondary" href="#announcements">Tingnan ang mga Anunsyo</a>
+            <a class="button button-secondary" href="#announcements" {...i18n("home.viewAnnouncements")}>
+              {t("home.viewAnnouncements")}
+            </a>
           </div>
         </div>
 
@@ -55,23 +58,36 @@ const stats = [
           <div class="mayor-photo-wrap">
             {
               mayorImage ? (
-                <img id="mayorImage" class="mayor-photo" src={mayorImage} alt="Larawan ng Punong Lungsod" />
+                <img
+                  id="mayorImage"
+                  class="mayor-photo"
+                  src={mayorImage}
+                  alt={t("home.mayorAlt")}
+                  {...i18nAttr({ alt: "home.mayorAlt" })}
+                />
               ) : (
                 <div class="hero-panel-icon">🏛️</div>
               )
             }
           </div>
-          <p class="hero-panel-label">Tanggapan ng Punong Lungsod</p>
+          <p class="hero-panel-label" {...i18n("home.mayorOffice")}>{t("home.mayorOffice")}</p>
           <h2>{settings.mayorName}</h2>
-          <p>Tapat na paglilingkod. Bukas na pamahalaan. Maayos na lungsod.</p>
-          <div class="status-pill"><span></span> Aktibo ang Portal</div>
+          <p {...i18n("home.motto")}>{t("home.motto")}</p>
+          <div class="status-pill"><span></span> <span {...i18n("home.status")}>{t("home.status")}</span></div>
         </aside>
       </div>
     </section>
 
     <section class="quick-stats">
       <div class="container stats-grid">
-        {stats.map((stat) => <div><strong id={stat.id}>{stat.count}</strong><span>{stat.label}</span></div>)}
+        {
+          stats.map((stat) => (
+            <div>
+              <strong id={stat.id}>{stat.count}</strong>
+              <span {...i18n(stat.label)}>{t(stat.label)}</span>
+            </div>
+          ))
+        }
       </div>
     </section>
 
@@ -79,10 +95,10 @@ const stats = [
       <div class="container">
         <div class="section-heading">
           <div>
-            <span class="eyebrow">Mga Serbisyong Online</span>
-            <h2>Mga Pampublikong Form</h2>
+            <span class="eyebrow" {...i18n("home.forms.eyebrow")}>{t("home.forms.eyebrow")}</span>
+            <h2 {...i18n("home.forms.title")}>{t("home.forms.title")}</h2>
           </div>
-          <p>Piliin ang serbisyong kailangan para makita ang mga tagubilin bago buksan ang form.</p>
+          <p {...i18n("home.forms.intro")}>{t("home.forms.intro")}</p>
         </div>
         <div class="forms-grid" id="formsGrid">
           {
@@ -93,18 +109,21 @@ const stats = [
                   type="button"
                   data-open-form
                   data-id={form.id}
-                  aria-label={`Tingnan muna ang detalye ng ${form.title}`}
+                  aria-label={t("home.forms.cardAria", { title: form.title })}
+                  {...i18nAttr({ "aria-label": "home.forms.cardAria" }, { title: form.title })}
                 >
                   <CardMedia image={form.image} icon={form.icon} />
                   <div class="form-card-body">
                     <h3>{form.title}</h3>
-                    <p>{form.description || "Tingnan muna ang mga tagubilin bago buksan ang opisyal na form."}</p>
-                    <span class="card-link">Tingnan ang Detalye →</span>
+                    <p {...(form.description ? {} : i18n("home.forms.cardDefault"))}>
+                      {form.description || t("home.forms.cardDefault")}
+                    </p>
+                    <span class="card-link" {...i18n(LABELS.Forms.readAction)}>{t(LABELS.Forms.readAction)}</span>
                   </div>
                 </button>
               ))
             ) : (
-              <div class="empty-state">Wala pang pampublikong form na maaaring buksan.</div>
+              <div class="empty-state" {...i18n("home.forms.empty")}>{t("home.forms.empty")}</div>
             )
           }
         </div>
@@ -115,11 +134,15 @@ const stats = [
       <div class="container">
         <div class="section-heading section-heading-actions">
           <div>
-            <span class="eyebrow">Mula sa Tanggapan ng Punong Lungsod</span>
-            <h2>Mga Anunsyo</h2>
-            <p>Mga pinakahuling pabatid, proyekto, programa, at kaganapan ng Tanggapan ng Punong Lungsod.</p>
+            <span class="eyebrow" {...i18n(ARCHIVE_COPY.Announcements.eyebrow)}>
+              {t(ARCHIVE_COPY.Announcements.eyebrow)}
+            </span>
+            <h2 {...i18n(LABELS.Announcements.plural)}>{t(LABELS.Announcements.plural)}</h2>
+            <p {...i18n("home.announcements.intro")}>{t("home.announcements.intro")}</p>
           </div>
-          <a class="button button-secondary" href={withBase("/announcements/")}>Tingnan Lahat →</a>
+          <a class="button button-secondary" href={withBase("/announcements/")} {...i18n("home.viewAll")}>
+            {t("home.viewAll")}
+          </a>
         </div>
         <div class="document-grid" id="announcementGrid">
           {
@@ -128,7 +151,9 @@ const stats = [
                 <DocumentCard item={item} section="Announcements" pinned={pinned} />
               ))
             ) : (
-              <div class="empty-state">{LABELS.Announcements.empty}</div>
+              <div class="empty-state" {...i18n(LABELS.Announcements.empty)}>
+                {t(LABELS.Announcements.empty)}
+              </div>
             )
           }
         </div>
@@ -139,11 +164,15 @@ const stats = [
       <div class="container">
         <div class="section-heading section-heading-actions">
           <div>
-            <span class="eyebrow">Tanggapan ng Punong Lungsod</span>
-            <h2>Executive Orders</h2>
-            <p>Mga opisyal na kautusang inilabas ng Punong Lungsod.</p>
+            <span class="eyebrow" {...i18n(ARCHIVE_COPY.ExecutiveOrders.eyebrow)}>
+              {t(ARCHIVE_COPY.ExecutiveOrders.eyebrow)}
+            </span>
+            <h2 {...i18n(LABELS.ExecutiveOrders.plural)}>{t(LABELS.ExecutiveOrders.plural)}</h2>
+            <p {...i18n(ARCHIVE_COPY.ExecutiveOrders.intro)}>{t(ARCHIVE_COPY.ExecutiveOrders.intro)}</p>
           </div>
-          <a class="button button-secondary" href={withBase("/executive-orders/")}>Tingnan Lahat →</a>
+          <a class="button button-secondary" href={withBase("/executive-orders/")} {...i18n("home.viewAll")}>
+            {t("home.viewAll")}
+          </a>
         </div>
         <div class="document-grid" id="executiveGrid">
           {
@@ -152,7 +181,9 @@ const stats = [
                 <DocumentCard item={item} section="ExecutiveOrders" fallbackImage={settings.defaultDocumentImageUrl} />
               ))
             ) : (
-              <div class="empty-state">{LABELS.ExecutiveOrders.empty}</div>
+              <div class="empty-state" {...i18n(LABELS.ExecutiveOrders.empty)}>
+                {t(LABELS.ExecutiveOrders.empty)}
+              </div>
             )
           }
         </div>
@@ -163,11 +194,15 @@ const stats = [
       <div class="container">
         <div class="section-heading section-heading-actions">
           <div>
-            <span class="eyebrow">Mga Pasya ng Pamahalaang Panglungsod</span>
-            <h2>Mga Resolusyon</h2>
-            <p>Mga pinagtibay na pasya, patakaran, at opisyal na pagpapasiya ng lungsod.</p>
+            <span class="eyebrow" {...i18n(ARCHIVE_COPY.Resolutions.eyebrow)}>
+              {t(ARCHIVE_COPY.Resolutions.eyebrow)}
+            </span>
+            <h2 {...i18n(LABELS.Resolutions.plural)}>{t(LABELS.Resolutions.plural)}</h2>
+            <p {...i18n(ARCHIVE_COPY.Resolutions.intro)}>{t(ARCHIVE_COPY.Resolutions.intro)}</p>
           </div>
-          <a class="button button-secondary" href={withBase("/resolutions/")}>Tingnan Lahat →</a>
+          <a class="button button-secondary" href={withBase("/resolutions/")} {...i18n("home.viewAll")}>
+            {t("home.viewAll")}
+          </a>
         </div>
         <div class="document-grid" id="resolutionGrid">
           {
@@ -176,7 +211,9 @@ const stats = [
                 <DocumentCard item={item} section="Resolutions" fallbackImage={settings.defaultDocumentImageUrl} />
               ))
             ) : (
-              <div class="empty-state">{LABELS.Resolutions.empty}</div>
+              <div class="empty-state" {...i18n(LABELS.Resolutions.empty)}>
+                {t(LABELS.Resolutions.empty)}
+              </div>
             )
           }
         </div>

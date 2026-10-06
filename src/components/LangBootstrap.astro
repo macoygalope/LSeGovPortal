@@ -1,0 +1,23 @@
+---
+import { DEFAULT_LANG, LANG_STORAGE_KEY } from "../lib/i18n";
+
+/**
+ * Runs in <head>, before the page paints. If the visitor chose another
+ * language, it sets <html lang> and hides the page until scripts/language.ts
+ * has translated it, so they never see a flash of the default language. A
+ * timeout lifts the hiding if that script never runs.
+ */
+---
+
+<script is:inline define:vars={{ storageKey: LANG_STORAGE_KEY, defaultLang: DEFAULT_LANG }}>
+  try {
+    var saved = localStorage.getItem(storageKey);
+    if (saved && saved !== defaultLang) {
+      document.documentElement.lang = saved;
+      document.documentElement.setAttribute("data-lang-pending", "");
+      setTimeout(function () {
+        document.documentElement.removeAttribute("data-lang-pending");
+      }, 2000);
+    }
+  } catch (error) {}
+</script>

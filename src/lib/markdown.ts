@@ -1,4 +1,5 @@
 import { escapeHtml } from "./format.ts";
+import { t, type MessageKey } from "./i18n.ts";
 
 /**
  * Safe subset of Markdown for long official documents. Supported: headings,
@@ -12,11 +13,17 @@ import { escapeHtml } from "./format.ts";
  *
  * Pass `links: false` to render link text without the anchor -- the kiosk
  * build does, since the kiosk screen can't be assumed to open external sites.
+ *
+ * Empty content renders a placeholder paragraph; `emptyKey` picks its message.
  */
-export function documentContentToHtml(content: string, options: { links?: boolean } = {}): string {
-  const { links = true } = options;
+export function documentContentToHtml(
+  content: string,
+  options: { links?: boolean; emptyKey?: MessageKey } = {},
+): string {
+  const { links = true, emptyKey = "doc.emptyBody" } = options;
   const normalized = String(content || "").replace(/\r\n?/g, "\n").trim();
-  if (!normalized) return `<p>Wala pang nailalathalang buong nilalaman.</p>`;
+  // The placeholder is interface text, so it stays translatable in the browser.
+  if (!normalized) return `<p data-i18n="${emptyKey}">${escapeHtml(t(emptyKey))}</p>`;
 
   function formatInline(text: string): string {
     let formatted = escapeHtml(text);

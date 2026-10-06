@@ -9,9 +9,18 @@ import "@fontsource/inter/latin-700.css";
 import "@fontsource/inter/latin-800.css";
 import "@fontsource/merriweather/latin-700.css";
 import "../styles/global.css";
+import I18n from "../components/I18n.astro";
+import LangBootstrap from "../components/LangBootstrap.astro";
+import LanguageSelect from "../components/LanguageSelect.astro";
+import { i18nAttr, t, type MessageKey } from "../lib/i18n";
+import { LABELS } from "../lib/sections";
 import { withBase } from "../lib/url";
 
 const home = withBase("/");
+
+// Attributes for a translatable placeholder / tooltip / aria-label.
+const placeholder = (key: MessageKey) => ({ placeholder: t(key), ...i18nAttr({ placeholder: key }) });
+const ariaLabel = (key: MessageKey) => ({ "aria-label": t(key), ...i18nAttr({ "aria-label": key }) });
 ---
 
 <!doctype html>
@@ -22,148 +31,150 @@ const home = withBase("/");
     <meta name="robots" content="noindex,nofollow" />
     <title>Los Santos eGov — Dashboard</title>
     <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
+    <LangBootstrap />
   </head>
 <body class="admin-body">
   <header class="admin-header">
     <div class="container header-inner">
       <a class="brand" href={home}>
         <span class="brand-seal">LS</span>
-        <span><strong>Los Santos eGov</strong><small>Dashboard ng Nilalaman</small></span>
+        <span><strong>Los Santos eGov</strong><I18n as="small" k="admin.brandSub" /></span>
       </a>
-      <a class="button button-secondary button-small" href={home}>Tingnan ang Website</a>
+      <a class="button button-secondary button-small" href={home}><I18n k="admin.viewSite" /></a>
     </div>
   </header>
 
   <main class="container admin-main">
     <section class="admin-login card" id="loginPanel">
-      <span class="eyebrow">Limitadong Access</span>
+      <I18n as="span" class="eyebrow" k="admin.login.eyebrow" />
       <h1>Admin Dashboard</h1>
-      <p>Ilagay ang pribadong admin token na itinakda sa Google Apps Script.</p>
+      <I18n as="p" k="admin.login.intro" />
       <form id="loginForm" class="admin-login-form">
         <label>
           Admin Token
           <input id="adminToken" type="password" autocomplete="current-password" required />
         </label>
-        <button class="button button-primary" type="submit">Buksan ang Dashboard</button>
+        <button class="button button-primary" type="submit"><I18n k="admin.login.submit" /></button>
       </form>
-      <p class="helper-text">Sa kasalukuyang browser session lamang pansamantalang itatago ang token.</p>
+      <I18n as="p" class="helper-text" k="admin.login.helper" />
     </section>
 
     <section class="admin-dashboard hidden" id="dashboard">
       <div class="admin-title-row">
         <div>
-          <span class="eyebrow">Pamamahala ng Nilalaman</span>
+          <I18n as="span" class="eyebrow" k="admin.dash.eyebrow" />
           <h1>Los Santos eGov Dashboard</h1>
-          <p>Magdagdag, mag-edit, maglathala, o magtanggal ng nilalaman at mga larawan sa website.</p>
+          <I18n as="p" k="admin.dash.intro" />
         </div>
-        <button class="button button-danger button-small" id="logoutButton" type="button">Mag-log Out</button>
+        <button class="button button-danger button-small" id="logoutButton" type="button"><I18n k="admin.logout" /></button>
       </div>
 
       <div class="admin-layout">
         <aside class="admin-sidebar card">
-          <button class="admin-tab active" data-section="Forms">Mga Form</button>
-          <button class="admin-tab" data-section="Announcements">Mga Anunsyo</button>
-          <button class="admin-tab" data-section="ExecutiveOrders">Executive Orders</button>
-          <button class="admin-tab" data-section="Memorandums">Mga Memorandum</button>
-          <button class="admin-tab" data-section="Resolutions">Mga Resolusyon</button>
-          <button class="admin-tab settings-tab" data-section="Settings">Mga Larawan at Ayos</button>
+          <button class="admin-tab active" data-section="Forms"><I18n k={LABELS.Forms.plural} /></button>
+          <button class="admin-tab" data-section="Announcements"><I18n k={LABELS.Announcements.plural} /></button>
+          <button class="admin-tab" data-section="ExecutiveOrders"><I18n k={LABELS.ExecutiveOrders.plural} /></button>
+          <button class="admin-tab" data-section="Memorandums"><I18n k={LABELS.Memorandums.plural} /></button>
+          <button class="admin-tab" data-section="Resolutions"><I18n k={LABELS.Resolutions.plural} /></button>
+          <button class="admin-tab settings-tab" data-section="Settings"><I18n k="admin.tab.Settings" /></button>
         </aside>
 
         <div class="admin-content">
           <section class="card admin-editor" id="entryEditor">
             <div class="admin-section-heading">
               <div>
-                <span class="eyebrow" id="editorEyebrow">Mga Form</span>
-                <h2 id="editorTitle">Magdagdag ng Bagong Entry</h2>
+                <span class="eyebrow" id="editorEyebrow">{t(LABELS.Forms.plural)}</span>
+                <h2 id="editorTitle">{t("admin.editor.new")}</h2>
               </div>
-              <button class="button button-secondary button-small hidden" id="cancelEditButton" type="button">Kanselahin ang Pag-edit</button>
+              <button class="button button-secondary button-small hidden" id="cancelEditButton" type="button"><I18n k="admin.editor.cancel" /></button>
             </div>
 
             <form id="entryForm" class="entry-form">
               <input type="hidden" id="entryId" />
 
               <label id="titleFieldGroup">
-                Pamagat
+                <I18n k="admin.field.title" />
                 <input id="titleInput" type="text" maxlength="180" required />
               </label>
 
               <section id="memorandumFieldsGroup" class="memorandum-admin-fields hidden" aria-labelledby="memorandumFieldsTitle">
                 <div class="admin-subsection-heading">
                   <div>
-                    <span class="eyebrow">Structured na Memorandum</span>
-                    <h3 id="memorandumFieldsTitle">Detalye ng Memorandum</h3>
+                    <I18n as="span" class="eyebrow" k="admin.memo.eyebrow" />
+                    <I18n as="h3" id="memorandumFieldsTitle" k="admin.memo.title" />
                   </div>
-                  <p>Ang paksa ang awtomatikong gagamiting pamagat ng card at ng internal memorandum page.</p>
+                  <I18n as="p" k="admin.memo.titleHelp" />
                 </div>
 
                 <label>
-                  Paksa
-                  <textarea id="memoSubjectInput" rows="3" maxlength="500" placeholder="Hal. Pagsasagawa ng Pagsusuri at Rekomendasyon sa mga Pampublikong Lugar"></textarea>
+                  <I18n k="admin.memo.subject" />
+                  <textarea id="memoSubjectInput" rows="3" maxlength="500" {...placeholder("admin.memo.subjectPlaceholder")}></textarea>
                 </label>
 
                 <div class="form-row">
                   <label>
-                    Para Sa
-                    <textarea id="memoToInput" rows="3" maxlength="500" placeholder="Hal. Hepe ng Los Santos Police Department (LSPD)"></textarea>
+                    <I18n k="admin.memo.to" />
+                    <textarea id="memoToInput" rows="3" maxlength="500" {...placeholder("admin.memo.toPlaceholder")}></textarea>
                   </label>
                   <label>
-                    Mula Kay
-                    <textarea id="memoFromInput" rows="3" maxlength="500" placeholder="Hal. Tanggapan ng Alkalde"></textarea>
+                    <I18n k="admin.memo.from" />
+                    <textarea id="memoFromInput" rows="3" maxlength="500" {...placeholder("admin.memo.fromPlaceholder")}></textarea>
                   </label>
                 </div>
 
                 <label>
-                  Larawan ng Lagda
-                  <input id="memoSignatureInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
-                  <span class="field-help">Opsyonal. Mas mainam ang transparent PNG na lagda.</span>
+                  <I18n k="admin.memo.signature" />
+                  <input id="memoSignatureInput" type="url" {...placeholder("admin.ph.publicPng")} />
+                  <I18n class="field-help" k="admin.memo.signatureHelp" />
                 </label>
 
                 <div class="form-row">
                   <label>
-                    Pangalan ng Lumagda
-                    <input id="memoSignatoryNameInput" type="text" maxlength="160" placeholder="Hal. Alejandro Tagalog" />
+                    <I18n k="admin.memo.signatoryName" />
+                    <input id="memoSignatoryNameInput" type="text" maxlength="160" {...placeholder("admin.memo.signatoryNamePlaceholder")} />
                   </label>
                   <label>
-                    Posisyon ng Lumagda
-                    <input id="memoSignatoryPositionInput" type="text" maxlength="180" placeholder="Hal. Alkalde ng Lungsod ng Los Santos" />
+                    <I18n k="admin.memo.signatoryPosition" />
+                    <input id="memoSignatoryPositionInput" type="text" maxlength="180" {...placeholder("admin.memo.signatoryPositionPlaceholder")} />
                   </label>
                 </div>
               </section>
 
               <label>
-                Maikling Paglalarawan
-                <textarea id="descriptionInput" rows="3" maxlength="1200" placeholder="Maikling paliwanag na makikita sa card."></textarea>
+                <I18n k="admin.field.description" />
+                <textarea id="descriptionInput" rows="3" maxlength="1200" {...placeholder("admin.field.descriptionPlaceholder")}></textarea>
               </label>
 
               <div id="contentFieldGroup" class="document-content-field hidden">
-                <label for="contentInput" id="contentFieldLabel">Buong Nilalaman</label>
+                {/* Label and placeholder text depend on the section; admin.js sets them. */}
+                <label for="contentInput" id="contentFieldLabel"></label>
 
-                <div class="formatting-toolbar" role="toolbar" aria-label="Mga kasangkapan sa pag-format ng nilalaman">
-                  <button type="button" class="format-button format-button-bold" data-document-format="bold" title="Bold (Ctrl+B)" aria-label="Gawing bold"><strong>B</strong></button>
-                  <button type="button" class="format-button format-button-italic" data-document-format="italic" title="Italic (Ctrl+I)" aria-label="Gawing italic"><em>I</em></button>
-                  <button type="button" class="format-button" data-document-format="heading" title="Maglagay ng heading" aria-label="Heading">H2</button>
+                <div class="formatting-toolbar" role="toolbar" {...ariaLabel("admin.fmt.toolbar")}>
+                  <button type="button" class="format-button format-button-bold" data-document-format="bold" title="Bold (Ctrl+B)" {...ariaLabel("admin.fmt.bold")}><strong>B</strong></button>
+                  <button type="button" class="format-button format-button-italic" data-document-format="italic" title="Italic (Ctrl+I)" {...ariaLabel("admin.fmt.italic")}><em>I</em></button>
+                  <button type="button" class="format-button" data-document-format="heading" title={t("admin.fmt.headingTitle")} {...i18nAttr({ title: "admin.fmt.headingTitle" })} aria-label="Heading">H2</button>
                   <span class="formatting-divider" aria-hidden="true"></span>
-                  <button type="button" class="format-button format-button-wide" data-document-format="bullet" title="Bullet list" aria-label="Bullet list">• Listahan</button>
-                  <button type="button" class="format-button format-button-wide" data-document-format="numbered" title="Numbered list" aria-label="Numbered list">1. Bilang</button>
-                  <button type="button" class="format-button" data-document-format="quote" title="Siping pahayag" aria-label="Siping pahayag">❝</button>
-                  <button type="button" class="format-button" data-document-format="divider" title="Pahalang na linya" aria-label="Pahalang na linya">―</button>
+                  <button type="button" class="format-button format-button-wide" data-document-format="bullet" title="Bullet list" aria-label="Bullet list"><I18n k="admin.fmt.bullet" /></button>
+                  <button type="button" class="format-button format-button-wide" data-document-format="numbered" title="Numbered list" aria-label="Numbered list"><I18n k="admin.fmt.numbered" /></button>
+                  <button type="button" class="format-button" data-document-format="quote" title={t("admin.fmt.quote")} {...i18nAttr({ title: "admin.fmt.quote", "aria-label": "admin.fmt.quote" })} aria-label={t("admin.fmt.quote")}>❝</button>
+                  <button type="button" class="format-button" data-document-format="divider" title={t("admin.fmt.divider")} {...i18nAttr({ title: "admin.fmt.divider", "aria-label": "admin.fmt.divider" })} aria-label={t("admin.fmt.divider")}>―</button>
                 </div>
 
-                <textarea id="contentInput" rows="18" maxlength="45000" spellcheck="true" placeholder="I-paste o isulat dito ang buong nilalaman. Piliin ang teksto at gamitin ang formatting buttons sa itaas."></textarea>
+                <textarea id="contentInput" rows="18" maxlength="45000" spellcheck="true"></textarea>
 
                 <div class="document-format-help">
-                  <span class="field-help">Hanggang 45,000 characters. Gumagana rin ang Ctrl+B at Ctrl+I.</span>
+                  <I18n class="field-help" k="admin.content.help" />
                   <details>
-                    <summary>Tingnan ang gabay sa formatting</summary>
+                    <summary><I18n k="admin.fmt.guide" /></summary>
                     <div class="format-guide-grid">
-                      <code>**Makapal**</code><span>Bold</span>
-                      <code>*Pahilis*</code><span>Italic</span>
-                      <code>***Makapal at pahilis***</code><span>Bold at italic</span>
-                      <code>## Pamagat ng Seksyon</code><span>Heading</span>
-                      <code>- Unang item</code><span>Bullet list</span>
-                      <code>1. Unang item</code><span>Numbered list</span>
-                      <code>&gt; Siping pahayag</code><span>Quote</span>
-                      <code>---</code><span>Pahalang na separator</span>
+                      <I18n as="code" k="admin.fmt.sample.bold" /><I18n k="admin.fmt.label.bold" />
+                      <I18n as="code" k="admin.fmt.sample.italic" /><I18n k="admin.fmt.label.italic" />
+                      <I18n as="code" k="admin.fmt.sample.boldItalic" /><I18n k="admin.fmt.label.boldItalic" />
+                      <I18n as="code" k="admin.fmt.sample.heading" /><I18n k="admin.fmt.label.heading" />
+                      <I18n as="code" k="admin.fmt.sample.bullet" /><I18n k="admin.fmt.label.bullet" />
+                      <I18n as="code" k="admin.fmt.sample.numbered" /><I18n k="admin.fmt.label.numbered" />
+                      <I18n as="code" k="admin.fmt.sample.quote" /><I18n k="admin.fmt.label.quote" />
+                      <code>---</code><I18n k="admin.fmt.label.divider" />
                     </div>
                   </details>
                 </div>
@@ -171,11 +182,11 @@ const home = withBase("/");
 
               <div class="form-row">
                 <label>
-                  <span id="numberFieldLabel">Numero o Sanggunian</span>
-                  <input id="numberInput" type="text" maxlength="100" placeholder="Hal. Executive Order Blg. 07, Serye ng 2026" />
+                  <span id="numberFieldLabel">{t("admin.number.label.default")}</span>
+                  <input id="numberInput" type="text" maxlength="100" />
                 </label>
                 <label>
-                  Petsa
+                  <I18n k="admin.field.date" />
                   <input id="dateInput" type="date" />
                 </label>
               </div>
@@ -183,184 +194,184 @@ const home = withBase("/");
               <section id="autoNumberFields" class="entry-option-panel hidden">
                 <label class="checkbox-label">
                   <input id="autoNumberInput" type="checkbox" checked />
-                  <span>Awtomatikong italaga ang kasunod na numero sa unang pag-publish</span>
+                  <I18n k="admin.auto.label" />
                 </label>
-                <p class="field-help" id="autoNumberHelp">Magkahiwalay ang bilang ng EO, memorandum, at resolusyon. Babalik ito sa 01 sa bagong taon.</p>
+                <p class="field-help" id="autoNumberHelp">{t("admin.auto.help.default")}</p>
               </section>
 
               <section id="announcementPinFields" class="entry-option-panel pinned-option-panel hidden">
                 <div class="admin-subsection-heading compact-heading">
                   <div>
-                    <span class="eyebrow">Mahalagang Anunsyo</span>
-                    <h3>I-pin sa itaas</h3>
+                    <I18n as="span" class="eyebrow" k="admin.pin.eyebrow" />
+                    <I18n as="h3" k="admin.pin.title" />
                   </div>
-                  <p>Hanggang tatlong aktibong anunsyo ang maaaring naka-pin.</p>
+                  <I18n as="p" k="admin.pin.help" />
                 </div>
                 <label class="checkbox-label">
                   <input id="pinnedInput" type="checkbox" />
-                  <span>I-pin bilang mahalagang anunsyo</span>
+                  <I18n k="admin.pin.checkbox" />
                 </label>
                 <div class="form-row pin-detail-fields">
                   <label>
-                    Ayos ng Pin
+                    <I18n k="admin.pin.order" />
                     <input id="pinOrderInput" type="number" min="1" max="3" value="1" />
-                    <span class="field-help">1 ang pinakamauuna.</span>
+                    <I18n class="field-help" k="admin.pin.orderHelp" />
                   </label>
                   <label>
-                    Huling Araw ng Pagka-pin
+                    <I18n k="admin.pin.expires" />
                     <input id="pinExpiresInput" type="date" />
-                    <span class="field-help">Opsyonal. Pagkalipas nito, regular na anunsyo na lamang ito.</span>
+                    <I18n class="field-help" k="admin.pin.expiresHelp" />
                   </label>
                 </div>
               </section>
 
               <label>
-                Link ng Larawan
-                <input id="imageInput" type="url" placeholder="https://... o public Google Drive share link" />
-                <span class="field-help">Opsyonal. Gagamitin bilang larawan ng card at cover ng internal page. Dapat naka-public ang larawan.</span>
+                <I18n k="admin.image.label" />
+                <input id="imageInput" type="url" {...placeholder("admin.image.placeholder")} />
+                <I18n class="field-help" k="admin.image.help" />
               </label>
 
               <label>
-                External Link <span id="urlRequirementText">(kailangan para sa mga form)</span>
+                External Link <span id="urlRequirementText">{t("admin.url.required")}</span>
                 <input id="urlInput" type="url" placeholder="https://..." />
-                <span class="field-help" id="urlHelpText">Ilagay ang Google Form link.</span>
+                <span class="field-help" id="urlHelpText">{t("admin.url.help.form")}</span>
               </label>
 
               <div class="form-row">
                 <label>
-                  Icon o Emoji
+                  <I18n k="admin.field.icon" />
                   <input id="iconInput" type="text" maxlength="12" placeholder="📄" />
                 </label>
                 <label>
-                  Ayos ng Pagkakasunod
+                  <I18n k="admin.field.order" />
                   <input id="orderInput" type="number" min="0" value="0" />
                 </label>
               </div>
 
               <label class="checkbox-label">
                 <input id="publishedInput" type="checkbox" checked />
-                <span>Ilathala sa website</span>
+                <I18n k="admin.field.published" />
               </label>
 
-              <button class="button button-primary" type="submit" id="saveButton">I-save ang Entry</button>
+              <button class="button button-primary" type="submit" id="saveButton">{t("admin.save")}</button>
             </form>
           </section>
 
           <section class="card admin-records" id="recordsPanel">
             <div class="admin-section-heading">
               <div>
-                <span class="eyebrow">Mga Record sa Google Sheet</span>
-                <h2 id="recordsTitle">Mga Form</h2>
+                <I18n as="span" class="eyebrow" k="admin.records.eyebrow" />
+                <h2 id="recordsTitle">{t(LABELS.Forms.plural)}</h2>
               </div>
-              <button class="button button-secondary button-small" id="refreshButton" type="button">I-refresh</button>
+              <button class="button button-secondary button-small" id="refreshButton" type="button"><I18n k="admin.refresh" /></button>
             </div>
             <div id="recordsList" class="records-list">
-              <div class="loading-card">Kinukuha ang mga record…</div>
+              <div class="loading-card">{t("admin.records.loading")}</div>
             </div>
           </section>
 
           <section class="card settings-editor hidden" id="settingsEditor">
             <div class="admin-section-heading">
               <div>
-                <span class="eyebrow">Mga Larawan at Ayos ng Website</span>
-                <h2>Mga Pangunahing Setting</h2>
+                <I18n as="span" class="eyebrow" k="admin.set.eyebrow" />
+                <I18n as="h2" k="admin.set.title" />
               </div>
             </div>
 
             <form id="settingsForm" class="entry-form">
               <div class="form-row">
                 <label>
-                  Pangalan ng Portal
+                  <I18n k="admin.set.siteTitle" />
                   <input id="siteTitleInput" type="text" maxlength="100" />
                 </label>
                 <label>
-                  Subtitle ng Portal
+                  <I18n k="admin.set.siteSubtitle" />
                   <input id="siteSubtitleInput" type="text" maxlength="140" />
                 </label>
               </div>
 
               <label>
-                Pangunahing Pamagat sa Unang Pahina
+                <I18n k="admin.set.heroTitle" />
                 <input id="heroTitleInput" type="text" maxlength="220" />
               </label>
 
               <label>
-                Paliwanag sa Unang Pahina
+                <I18n k="admin.set.heroDescription" />
                 <textarea id="heroDescriptionInput" rows="3" maxlength="700"></textarea>
               </label>
 
               <div class="settings-image-grid">
                 <label>
-                  Logo o Selyo
-                  <input id="logoUrlInput" type="url" placeholder="Public image URL o Google Drive share link" />
-                  <span class="field-help">Lalabas sa header, footer, at document reader.</span>
+                  <I18n k="admin.set.logo" />
+                  <input id="logoUrlInput" type="url" {...placeholder("admin.ph.publicImage")} />
+                  <I18n class="field-help" k="admin.set.logoHelp" />
                 </label>
                 <label>
-                  Larawan ng Punong Lungsod
-                  <input id="mayorImageUrlInput" type="url" placeholder="Public image URL o Google Drive share link" />
-                  <span class="field-help">Lalabas sa profile card sa unang pahina.</span>
+                  <I18n k="admin.set.mayorImage" />
+                  <input id="mayorImageUrlInput" type="url" {...placeholder("admin.ph.publicImage")} />
+                  <I18n class="field-help" k="admin.set.mayorImageHelp" />
                 </label>
                 <label>
-                  Background ng Hero Section
-                  <input id="heroImageUrlInput" type="url" placeholder="Public image URL o Google Drive share link" />
-                  <span class="field-help">Mainam ang malapad na larawan na hindi bababa sa 1600×900.</span>
+                  <I18n k="admin.set.heroImage" />
+                  <input id="heroImageUrlInput" type="url" {...placeholder("admin.ph.publicImage")} />
+                  <I18n class="field-help" k="admin.set.heroImageHelp" />
                 </label>
                 <label>
-                  Default na Larawan ng Dokumento
-                  <input id="defaultDocumentImageUrlInput" type="url" placeholder="Public image URL o Google Drive share link" />
-                  <span class="field-help">Gagamitin bilang default cover ng mga dokumento at bilang letterhead ng lahat ng memorandum.</span>
+                  <I18n k="admin.set.docImage" />
+                  <input id="defaultDocumentImageUrlInput" type="url" {...placeholder("admin.ph.publicImage")} />
+                  <I18n class="field-help" k="admin.set.docImageHelp" />
                 </label>
               </div>
 
               <label>
-                Pangalan ng Punong Lungsod
+                <I18n k="admin.set.mayorName" />
                 <input id="mayorNameInput" type="text" maxlength="120" />
               </label>
 
               <section class="memorandum-default-settings" aria-labelledby="memorandumDefaultsTitle">
                 <div class="admin-subsection-heading">
                   <div>
-                    <span class="eyebrow">Default na Memorandum</span>
-                    <h3 id="memorandumDefaultsTitle">Lagda at Lumagda</h3>
+                    <I18n as="span" class="eyebrow" k="admin.set.memoEyebrow" />
+                    <I18n as="h3" id="memorandumDefaultsTitle" k="admin.set.memoTitle" />
                   </div>
-                  <p>Ang Default na Larawan ng Dokumento sa itaas ang nagsisilbing letterhead. Ang mga setting sa ibaba ay gagamitin kapag walang sariling lumagda ang memorandum.</p>
+                  <I18n as="p" k="admin.set.memoHelp" />
                 </div>
 
                 <label>
-                  Default na Larawan ng Lagda
-                  <input id="defaultSignatureImageUrlInput" type="url" placeholder="Public PNG image URL o Google Drive share link" />
+                  <I18n k="admin.set.signature" />
+                  <input id="defaultSignatureImageUrlInput" type="url" {...placeholder("admin.ph.publicPng")} />
                 </label>
 
                 <div class="form-row">
                   <label>
-                    Default na Pangalan ng Lumagda
+                    <I18n k="admin.set.signatoryName" />
                     <input id="defaultSignatoryNameInput" type="text" maxlength="160" placeholder="Alejandro Tagalog" />
                   </label>
                   <label>
-                    Default na Posisyon ng Lumagda
-                    <input id="defaultSignatoryPositionInput" type="text" maxlength="180" placeholder="Alkalde ng Lungsod ng Los Santos" />
+                    <I18n k="admin.set.signatoryPosition" />
+                    <input id="defaultSignatoryPositionInput" type="text" maxlength="180" {...placeholder("settings.defaultSignatoryPosition")} />
                   </label>
                 </div>
               </section>
 
               <div class="form-row">
                 <label>
-                  Pangalan ng Pindutan sa Pagpupulong
-                  <input id="meetingButtonLabelInput" type="text" maxlength="80" placeholder="Makipagpulong kay Mayor" />
+                  <I18n k="admin.set.meetingLabel" />
+                  <input id="meetingButtonLabelInput" type="text" maxlength="80" {...placeholder("settings.meetingButtonLabel")} />
                 </label>
                 <label>
-                  Google Calendar Booking Link
+                  <span>Google Calendar Booking Link</span>
                   <input id="meetingUrlInput" type="url" placeholder="https://calendar.google.com/calendar/appointments/..." />
-                  <span class="field-help">Ilagay ang public booking page mula sa Google Calendar. Kapag blangko, hindi lalabas ang pindutan.</span>
+                  <I18n class="field-help" k="admin.set.meetingUrlHelp" />
                 </label>
               </div>
 
               <label>
-                Teksto sa Footer
+                <I18n k="admin.set.footerText" />
                 <input id="footerTextInput" type="text" maxlength="220" />
               </label>
 
-              <button class="button button-primary" id="saveSettingsButton" type="submit">I-save ang mga Setting</button>
+              <button class="button button-primary" id="saveSettingsButton" type="submit">{t("admin.set.save")}</button>
             </form>
           </section>
         </div>
@@ -368,9 +379,16 @@ const home = withBase("/");
     </section>
   </main>
 
+  <footer class="site-footer admin-footer">
+    <div class="container footer-inner">
+      <LanguageSelect />
+    </div>
+  </footer>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
+      import "../scripts/language.ts";
       import "./admin.js";
     </script>
   </body>

@@ -2,6 +2,8 @@
 // pop-out. The open form is mirrored in the URL hash (#form=<id>) so the
 // browser Back button closes it and a form can be linked to directly.
 
+import { applyTranslations } from "./i18n.ts";
+
 const viewer = document.getElementById("documentViewer");
 const container = document.getElementById("viewerDocument");
 const closeButton = document.getElementById("closeDocumentViewer");
@@ -25,6 +27,8 @@ function show(id: string): boolean {
   if (!viewer || !container || !template) return false;
 
   container.replaceChildren(template.content.cloneNode(true));
+  // The template is pre-rendered in the default language; match the chosen one.
+  applyTranslations(container);
   viewer.classList.add("open");
   viewer.setAttribute("aria-hidden", "false");
   document.body.classList.add("viewer-open");

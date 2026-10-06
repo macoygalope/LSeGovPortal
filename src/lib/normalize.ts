@@ -1,3 +1,4 @@
+import { t } from "./i18n.ts";
 import {
   SECTIONS,
   type EgovData,
@@ -8,21 +9,20 @@ import {
 
 export const DEFAULT_SETTINGS: SiteSettings = {
   siteTitle: "Los Santos eGov",
-  siteSubtitle: "Opisyal na Portal ng Serbisyong Digital",
-  heroTitle: "Mga serbisyo, dokumento, at pabatid ng lungsod—nasa iisang lugar.",
-  heroDescription:
-    "Buksan ang mga opisyal na form, basahin ang mahahalagang anunsyo, at tingnan ang mga dokumentong inilabas ng Pamahalaang Panglungsod.",
+  siteSubtitle: t("settings.siteSubtitle"),
+  heroTitle: t("settings.heroTitle"),
+  heroDescription: t("settings.heroDescription"),
   heroImageUrl: "",
   logoUrl: "",
   mayorImageUrl: "",
   mayorName: "Hon. Alejandro Tagalog",
-  meetingButtonLabel: "Makipagpulong kay Mayor",
+  meetingButtonLabel: t("settings.meetingButtonLabel"),
   meetingUrl: "",
   defaultDocumentImageUrl: "",
   defaultSignatureImageUrl: "",
   defaultSignatoryName: "Alejandro Tagalog",
-  defaultSignatoryPosition: "Alkalde ng Lungsod ng Los Santos",
-  footerText: "© Pamahalaang Panglungsod ng Los Santos. Lahat ng karapatan ay nakalaan.",
+  defaultSignatoryPosition: t("settings.defaultSignatoryPosition"),
+  footerText: t("settings.footerText"),
 };
 
 /** Sheets hands back booleans as true/false or "TRUE"/"true"/"false". */

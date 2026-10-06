@@ -10,6 +10,7 @@ import {
   sortDocuments,
   type SortMode,
 } from "../../lib/documents";
+import { i18n, i18nAttr, t } from "../../lib/i18n";
 import { ARCHIVE_COPY, LABELS, SECTION_ROUTE } from "../../lib/sections";
 import { withBase } from "../../lib/url";
 import { DOCUMENT_SECTIONS, type DocumentSection } from "../../lib/types";
@@ -57,51 +58,58 @@ if (section === "Announcements") {
 ---
 
 <Layout
-  title={copy.heading}
-  description={copy.intro}
+  titleKey={copy.heading}
+  descriptionKey={copy.intro}
   settings={settings}
   noindex={section === "Memorandums"}
 >
   <main>
     <section class="page-hero">
       <div class="container">
-        <a class="back-link" href={withBase("/")}>← Bumalik sa Unang Pahina</a>
-        <span class="eyebrow">{copy.eyebrow}</span>
-        <h1>{copy.heading}</h1>
-        <p>{copy.intro}</p>
+        <a class="back-link" href={withBase("/")} {...i18n("archive.back")}>{t("archive.back")}</a>
+        <span class="eyebrow" {...i18n(copy.eyebrow)}>{t(copy.eyebrow)}</span>
+        <h1 {...i18n(copy.heading)}>{t(copy.heading)}</h1>
+        <p {...i18n(copy.intro)}>{t(copy.intro)}</p>
       </div>
     </section>
 
     <section class="section">
+      {/* The data-*-key attributes hold message keys; scripts/archive.ts translates them. */}
       <div
         class="container"
         data-archive
         data-page-size={PAGE_SIZE}
-        data-count-singular={label.countSingular}
-        data-count-plural={label.countPlural}
-        data-search-empty={label.searchEmpty}
+        data-count-singular-key={label.countSingular}
+        data-count-plural-key={label.countPlural}
+        data-empty-key={label.empty}
+        data-search-empty-key={label.searchEmpty}
       >
         <div class="archive-toolbar">
           <label class="archive-search">
-            <span>{copy.searchLabel}</span>
-            <input id="archiveSearch" type="search" placeholder={copy.searchPlaceholder} />
+            <span {...i18n(copy.searchLabel)}>{t(copy.searchLabel)}</span>
+            <input
+              id="archiveSearch"
+              type="search"
+              placeholder={t(copy.searchPlaceholder)}
+              {...i18nAttr({ placeholder: copy.searchPlaceholder })}
+            />
           </label>
           <div class="archive-controls">
             {
               sortable && (
                 <label class="archive-sort">
-                  <span>Ayusin ayon sa</span>
+                  <span {...i18n("archive.sort")}>{t("archive.sort")}</span>
                   <select id="archiveSort">
-                    <option value="newest">Pinakabago</option>
-                    <option value="oldest">Pinakaluma</option>
-                    <option value="numberAsc">Numero — Pataas</option>
-                    <option value="numberDesc">Numero — Pababa</option>
+                    <option value="newest" {...i18n("archive.sort.newest")}>{t("archive.sort.newest")}</option>
+                    <option value="oldest" {...i18n("archive.sort.oldest")}>{t("archive.sort.oldest")}</option>
+                    <option value="numberAsc" {...i18n("archive.sort.numberAsc")}>{t("archive.sort.numberAsc")}</option>
+                    <option value="numberDesc" {...i18n("archive.sort.numberDesc")}>{t("archive.sort.numberDesc")}</option>
                   </select>
                 </label>
               )
             }
             <div class="archive-count" id="archiveCount">
-              {cards.length} {cards.length === 1 ? label.countSingular : label.countPlural}
+              {cards.length} {t(cards.length === 1 ? label.countSingular : label.countPlural)}
             </div>
           </div>
         </div>
@@ -121,10 +129,17 @@ if (section === "Announcements") {
             ))
           }
           <div class:list={["empty-state", { hidden: cards.length > 0 }]} data-archive-empty>
-            {cards.length ? label.searchEmpty : label.empty}
+            {t(cards.length ? label.searchEmpty : label.empty)}
           </div>
         </div>
-        <nav class="pagination" id="pagination" aria-label="Mga pahina" data-archive-pagination></nav>
+        <nav
+          class="pagination"
+          id="pagination"
+          aria-label={t("archive.pages")}
+          {...i18nAttr({ "aria-label": "archive.pages" })}
+          data-archive-pagination
+        >
+        </nav>
       </div>
     </section>
   </main>

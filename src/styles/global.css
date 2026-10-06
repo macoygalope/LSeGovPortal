@@ -478,7 +478,30 @@ img { max-width: 100%; }
 .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 24px; }
 .footer-brand .brand-seal { background: white; color: var(--navy); }
 .footer-brand small { color: #b8cbe1; }
-.footer-inner > p { margin: 0; color: #b8cbe1; font-size: 12px; }
+.footer-meta { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 14px 24px; }
+.footer-meta p { margin: 0; color: #b8cbe1; font-size: 12px; }
+
+.language-switcher { display: inline-flex; align-items: center; gap: 10px; color: #b8cbe1; font-size: 12px; }
+.language-switcher select {
+  min-height: 38px;
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  outline: none;
+}
+.language-switcher select:hover { background: rgba(255,255,255,0.14); }
+.language-switcher select:focus-visible { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(214,168,75,0.28); }
+/* The list opens with the browser's own colours, so keep its text readable. */
+.language-switcher option { color: var(--ink); background: white; }
+
+/* Set by LangBootstrap.astro while a saved non-default language is being applied. */
+html[data-lang-pending] body { visibility: hidden; }
+.admin-footer { margin-top: 48px; }
+.admin-footer .footer-inner { justify-content: flex-end; }
 
 input, textarea {
   width: 100%;
@@ -743,6 +766,7 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   .section-heading,
   .section-heading-actions,
   .footer-inner,
+  .footer-meta,
   .admin-title-row,
   .archive-toolbar { align-items: flex-start; flex-direction: column; }
   .forms-grid,

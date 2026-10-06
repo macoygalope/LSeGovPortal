@@ -7,29 +7,36 @@ import "@fontsource/inter/latin-800.css";
 import "@fontsource/merriweather/latin-700.css";
 import "../styles/global.css";
 
+import { i18n, i18nAttr, settingI18n, t, type MessageKey } from "../lib/i18n";
 import { withBase } from "../lib/url";
 import type { SiteSettings } from "../lib/types";
 import BrandSeal from "./BrandSeal.astro";
+import LangBootstrap from "./LangBootstrap.astro";
+import LanguageSelect from "./LanguageSelect.astro";
 
 interface Props {
   /** Page name; the site title is appended. Omit on the home page. */
   title?: string;
+  /** Like `title`, for fixed interface text that follows the chosen language. */
+  titleKey?: MessageKey;
   description?: string;
+  descriptionKey?: MessageKey;
   settings: SiteSettings;
   noindex?: boolean;
   bodyClass?: string;
 }
 
-const { title, description, settings, noindex = false, bodyClass } = Astro.props;
-const pageTitle = title ? `${title} — ${settings.siteTitle}` : settings.siteTitle;
-const pageDescription =
-  description ?? "Los Santos eGov — mga online na form, anunsyo, executive order, at resolusyon.";
+const { title, titleKey, description, descriptionKey, settings, noindex = false, bodyClass } = Astro.props;
+const pageName = titleKey ? t(titleKey) : title;
+const pageTitle = pageName ? `${pageName} — ${settings.siteTitle}` : settings.siteTitle;
+const metaDescriptionKey = description === undefined ? (descriptionKey ?? "site.description") : descriptionKey;
+const pageDescription = description ?? t(metaDescriptionKey!);
 
-const nav = [
-  { href: withBase("/#forms"), label: "Mga Form" },
-  { href: withBase("/announcements/"), label: "Mga Anunsyo" },
-  { href: withBase("/executive-orders/"), label: "Executive Orders" },
-  { href: withBase("/resolutions/"), label: "Mga Resolusyon" },
+const nav: { href: string; key: MessageKey }[] = [
+  { href: withBase("/#forms"), key: "nav.forms" },
+  { href: withBase("/announcements/"), key: "nav.announcements" },
+  { href: withBase("/executive-orders/"), key: "nav.executiveOrders" },
+  { href: withBase("/resolutions/"), key: "nav.resolutions" },
 ];
 ---
 
@@ -38,10 +45,18 @@ const nav = [
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={pageDescription} />
+    <meta
+      name="description"
+      content={pageDescription}
+      {...(metaDescriptionKey ? i18nAttr({ content: metaDescriptionKey }) : {})}
+    />
+    <LangBootstrap />
     {noindex && <meta name="robots" content="noindex,nofollow" />}
     <link rel="icon" type="image/svg+xml" href={withBase("/favicon.svg")} />
-    <title>{pageTitle}</title>
+    <title
+      data-title-key={titleKey}
+      data-title-suffix={titleKey ? settings.siteTitle : undefined}
+    >{pageTitle}</title>
   </head>
   <body class={bodyClass}>
     <div class="top-strip"></div>
@@ -51,14 +66,14 @@ const nav = [
           <BrandSeal logoUrl={settings.logoUrl} />
           <span>
             <strong>{settings.siteTitle}</strong>
-            <small>{settings.siteSubtitle}</small>
+            <small {...settingI18n("siteSubtitle", settings.siteSubtitle)}>{settings.siteSubtitle}</small>
           </span>
         </a>
-        <button class="menu-button" id="menuButton" type="button" aria-label="Buksan ang menu" aria-expanded="false">
+        <button class="menu-button" id="menuButton" type="button" aria-label={t("nav.menuOpen")} {...i18nAttr({ "aria-label": "nav.menuOpen" })} aria-expanded="false">
           <span></span><span></span><span></span>
         </button>
         <nav class="site-nav" id="siteNav">
-          {nav.map((link) => <a href={link.href}>{link.label}</a>)}
+          {nav.map((link) => <a href={link.href} {...i18n(link.key)}>{t(link.key)}</a>)}
         </nav>
       </div>
     </header>
@@ -71,14 +86,19 @@ const nav = [
           <BrandSeal logoUrl={settings.logoUrl} />
           <span>
             <strong>{settings.siteTitle}</strong>
-            <small>{settings.siteSubtitle}</small>
+            <small {...settingI18n("siteSubtitle", settings.siteSubtitle)}>{settings.siteSubtitle}</small>
           </span>
         </div>
-        <p><span>{settings.footerText}</span></p>
+        <div class="footer-meta">
+          <p><span {...settingI18n("footerText", settings.footerText)}>{settings.footerText}</span></p>
+          <LanguageSelect />
+        </div>
       </div>
     </footer>
 
     <script>
+      import "../scripts/language.ts";
+
       const menuButton = document.getElementById("menuButton");
       const siteNav = document.getElementById("siteNav");
       if (menuButton && siteNav) {

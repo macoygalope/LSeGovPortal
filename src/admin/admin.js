@@ -1,13 +1,12 @@
+import { translate, translateBackendError } from "../lib/i18n.ts";
+import { LABELS } from "../lib/sections.ts";
+import { getLang, onLangChange, t } from "../scripts/i18n.ts";
+
 const API_URL = import.meta.env.PUBLIC_EGOV_API_URL || "";
 
-const SECTION_NAMES = {
-  Forms: "Mga Form",
-  Announcements: "Mga Anunsyo",
-  ExecutiveOrders: "Executive Orders",
-  Memorandums: "Mga Memorandum",
-  Resolutions: "Mga Resolusyon",
-  Settings: "Mga Larawan at Ayos"
-};
+function sectionName(section) {
+  return section === "Settings" ? t("admin.tab.Settings") : t(LABELS[section].plural);
+}
 
 const INTERNAL_DOCUMENT_SECTIONS = new Set(["Forms", "Announcements", "ExecutiveOrders", "Memorandums", "Resolutions"]);
 const AUTO_NUMBER_SECTIONS = new Set(["ExecutiveOrders", "Memorandums", "Resolutions"]);
@@ -17,6 +16,8 @@ const CONTENT_UPLOAD_RETRY_DELAY_MS = 900;
 
 let activeSection = "Forms";
 let records = [];
+let recordsLoaded = false;
+let editingRecord = false;
 let adminToken = sessionStorage.getItem("egovAdminToken") || "";
 
 const loginPanel = document.getElementById("loginPanel");
@@ -35,7 +36,7 @@ function isConfigured() {
 function jsonp(params, timeoutMs = 25000) {
   return new Promise((resolve, reject) => {
     if (!isConfigured()) {
-      reject(new Error("Ilagay muna ang Apps Script URL sa config.js."));
+      reject(new Error(t("admin.err.noApiUrl")));
       return;
     }
 
@@ -43,7 +44,7 @@ function jsonp(params, timeoutMs = 25000) {
     const script = document.createElement("script");
     const timeout = setTimeout(() => {
       cleanup();
-      reject(new Error("Masyadong matagal ang tugon ng backend."));
+      reject(new Error(t("admin.err.timeout")));
     }, timeoutMs);
 
     function cleanup() {
@@ -54,7 +55,7 @@ function jsonp(params, timeoutMs = 25000) {
 
     window[callbackName] = (payload) => {
       cleanup();
-      if (!payload || payload.ok === false) reject(new Error(payload?.error || "Hindi naisagawa ang kahilingan."));
+      if (!payload || payload.ok === false) reject(new Error(payload?.error ? translateBackendError(payload.error, getLang()) : t("admin.err.failed")));
       else resolve(payload);
     };
 
@@ -68,7 +69,7 @@ function jsonp(params, timeoutMs = 25000) {
     script.src = `${API_URL}?${query.toString()}`;
     script.onerror = () => {
       cleanup();
-      reject(new Error("Hindi makakonekta sa Google Apps Script."));
+      reject(new Error(t("admin.err.connect")));
     };
     document.body.appendChild(script);
   });
@@ -129,7 +130,7 @@ function applyDocumentFormatting(command) {
 
   if (command === "bold" || command === "italic") {
     const marker = command === "bold" ? "**" : "*";
-    const placeholder = command === "bold" ? "makapal na teksto" : "pahilis na teksto";
+    const placeholder = t(command === "bold" ? "admin.fmt.placeholder.bold" : "admin.fmt.placeholder.italic");
     const content = selected || placeholder;
     const replacement = `${marker}${content}${marker}`;
     replaceDocumentSelection(replacement, marker.length, marker.length + content.length);
@@ -137,25 +138,25 @@ function applyDocumentFormatting(command) {
   }
 
   if (command === "heading") {
-    transformSelectedLines((line) => `## ${line.replace(/^#{1,3}\s+/, "")}`, "Pamagat ng Seksyon");
+    transformSelectedLines((line) => `## ${line.replace(/^#{1,3}\s+/, "")}`, t("admin.fmt.placeholder.heading"));
     return;
   }
 
   if (command === "bullet") {
-    transformSelectedLines((line) => `- ${line.replace(/^\s*[-+]\s+/, "")}`, "Unang item\nIkalawang item");
+    transformSelectedLines((line) => `- ${line.replace(/^\s*[-+]\s+/, "")}`, t("admin.fmt.placeholder.list"));
     return;
   }
 
   if (command === "numbered") {
     transformSelectedLines(
       (line, index) => `${index + 1}. ${line.replace(/^\s*\d+[.)]\s+/, "")}`,
-      "Unang item\nIkalawang item"
+      t("admin.fmt.placeholder.list")
     );
     return;
   }
 
   if (command === "quote") {
-    transformSelectedLines((line) => `> ${line.replace(/^\s*>\s?/, "")}`, "Siping pahayag");
+    transformSelectedLines((line) => `> ${line.replace(/^\s*>\s?/, "")}`, t("admin.fmt.placeholder.quote"));
     return;
   }
 
@@ -212,42 +213,27 @@ function configureEntryFields() {
   document.getElementById("numberInput").required = false;
   document.getElementById("dateInput").required = isMemorandum || hasAutoNumber;
 
-  document.getElementById("contentFieldLabel").textContent = isForm
-    ? "Mga Tagubilin at Detalye ng Form"
-    : isAnnouncement
-      ? "Buong Nilalaman ng Anunsyo"
+  const contentKind = isForm ? "form" : isAnnouncement ? "announcement" : isMemorandum ? "memo" : "doc";
+  document.getElementById("contentFieldLabel").textContent = t(`admin.content.label.${contentKind}`);
+  document.getElementById("contentInput").placeholder = t(`admin.content.ph.${contentKind}`);
+  document.getElementById("numberFieldLabel").textContent = t(
+    isAnnouncement
+      ? "admin.number.label.announcement"
       : isMemorandum
-        ? "Nilalaman ng Memorandum"
-        : "Buong Nilalaman ng Dokumento";
-  document.getElementById("contentInput").placeholder = isForm
-    ? "Ilagay dito ang mga tagubilin, requirements, paalala, proseso, o anumang detalye na dapat basahin muna bago buksan ang form. Maaari mong gamitin ang bold, italic, heading, bullet, numbering, quote, at separator."
-    : isAnnouncement
-      ? "Isulat dito ang buong detalye ng proyekto, programa, kaganapan, o opisyal na pabatid. Maaari mong gamitin ang formatting buttons sa itaas."
-      : isMemorandum
-        ? "Isulat dito ang katawan ng memorandum. Huwag nang ulitin ang PARA SA, MULA KAY, PAKSA, PETSA, o lagda dahil awtomatiko silang ilalagay sa internal memorandum page."
-        : "I-paste o isulat dito ang buong dokumento. Piliin ang teksto at gamitin ang formatting buttons sa itaas.";
-  document.getElementById("numberFieldLabel").textContent = isAnnouncement
-    ? "Uri o Sanggunian (opsyonal)"
-    : isMemorandum
-      ? "Numero ng Memorandum"
-      : "Numero o Sanggunian";
+        ? "admin.number.label.memo"
+        : "admin.number.label.default"
+  );
   document.getElementById("numberInput").placeholder = isAnnouncement
-    ? "Hal. Proyekto, Programa, Kaganapan, o Advisory"
-    : isMemorandum
-      ? "Awtomatikong itatalaga sa pag-publish"
-      : isForm
-        ? "Hindi kailangan para sa form"
-        : "Awtomatikong itatalaga sa pag-publish";
+    ? t("admin.number.ph.announcement")
+    : isForm
+      ? t("admin.number.ph.form")
+      : t("admin.number.ph.auto");
 
   document.getElementById("urlInput").required = isForm;
-  document.getElementById("urlRequirementText").textContent = isForm
-    ? "(kailangan para sa mga form)"
-    : "(opsyonal)";
-  document.getElementById("urlHelpText").textContent = isForm
-    ? "Ilagay ang Google Form link. Hindi ito agad bubuksan sa public site; lalabas muna ang instructions/detail pop-out bago ang “Buksan ang Form” button."
-    : isAnnouncement
-      ? "Opsyonal na registration link, event page, photo album, o karagdagang detalye."
-      : "Opsyonal na link sa signed PDF, Google Drive file, o opisyal na kopya.";
+  document.getElementById("urlRequirementText").textContent = t(isForm ? "admin.url.required" : "admin.url.optional");
+  document.getElementById("urlHelpText").textContent = t(
+    isForm ? "admin.url.help.form" : isAnnouncement ? "admin.url.help.announcement" : "admin.url.help.doc"
+  );
 
   syncNumberingInputState();
   syncPinFieldsState();
@@ -265,11 +251,11 @@ function syncNumberingInputState() {
 
   input.readOnly = autoCheckbox.checked;
   input.classList.toggle("auto-number-readonly", autoCheckbox.checked);
-  document.getElementById("autoNumberHelp").textContent = autoCheckbox.checked
-    ? (input.value
-        ? "Naitalaga na ang numerong ito at hindi na awtomatikong babaguhin."
-        : "Itatalaga ang kasunod na numero kapag unang inilathala ang entry.")
-    : "Manual override: ilagay ang kumpletong numero bago i-publish.";
+  document.getElementById("autoNumberHelp").textContent = t(
+    autoCheckbox.checked
+      ? (input.value ? "admin.auto.help.assigned" : "admin.auto.help.next")
+      : "admin.auto.help.manual"
+  );
 }
 
 function syncPinFieldsState() {
@@ -285,10 +271,12 @@ async function loadRecords() {
     return;
   }
 
-  recordsList.innerHTML = `<div class="loading-card">Kinukuha ang mga record…</div>`;
+  recordsLoaded = false;
+  recordsList.innerHTML = `<div class="loading-card">${escapeHtml(t("admin.records.loading"))}</div>`;
   try {
     const result = await jsonp({ action: "list", section: activeSection, includeDrafts: "true" });
     records = result.data || [];
+    recordsLoaded = true;
     renderRecords();
   } catch (error) {
     recordsList.innerHTML = `<div class="error-state">${escapeHtml(error.message)}</div>`;
@@ -304,10 +292,10 @@ function isActivePinnedAnnouncement(item) {
 }
 
 function renderRecords() {
-  document.getElementById("recordsTitle").textContent = SECTION_NAMES[activeSection];
+  document.getElementById("recordsTitle").textContent = sectionName(activeSection);
 
   if (!records.length) {
-    recordsList.innerHTML = `<div class="empty-state">Wala pang record sa seksyong ito.</div>`;
+    recordsList.innerHTML = `<div class="empty-state">${escapeHtml(t("admin.records.empty"))}</div>`;
     return;
   }
 
@@ -319,19 +307,19 @@ function renderRecords() {
   recordsList.innerHTML = sorted.map((item) => `
     <article class="record-item">
       <div class="record-summary">
-        ${item.image ? `<span class="record-image-indicator">May larawan</span>` : ""}
-        ${activeSection === "Announcements" && isActivePinnedAnnouncement(item) ? `<span class="record-pin-indicator">★ Naka-pin</span>` : ""}
+        ${item.image ? `<span class="record-image-indicator">${escapeHtml(t("admin.record.hasImage"))}</span>` : ""}
+        ${activeSection === "Announcements" && isActivePinnedAnnouncement(item) ? `<span class="record-pin-indicator">${escapeHtml(t("admin.record.pinned"))}</span>` : ""}
         <h3>
           ${escapeHtml(item.title)}
           <span class="record-status ${String(item.published).toLowerCase() === "true" ? "" : "draft"}">
-            ${String(item.published).toLowerCase() === "true" ? "Nakalathala" : "Draft"}
+            ${escapeHtml(t(String(item.published).toLowerCase() === "true" ? "admin.record.published" : "admin.record.draft"))}
           </span>
         </h3>
         <p>${escapeHtml(item.number || "")}${item.date ? ` · ${escapeHtml(item.date)}` : ""}</p>
       </div>
       <div class="record-actions">
-        <button class="button button-secondary button-small" data-edit="${escapeHtml(item.id)}">I-edit</button>
-        <button class="button button-danger button-small" data-delete="${escapeHtml(item.id)}">Tanggalin</button>
+        <button class="button button-secondary button-small" data-edit="${escapeHtml(item.id)}">${escapeHtml(t("admin.record.edit"))}</button>
+        <button class="button button-danger button-small" data-delete="${escapeHtml(item.id)}">${escapeHtml(t("admin.record.delete"))}</button>
       </div>
     </article>
   `).join("");
@@ -344,6 +332,14 @@ function renderRecords() {
   });
 }
 
+/** The editor's title and save button follow whether a record is being edited. */
+function renderEditorHeading() {
+  document.getElementById("editorTitle").textContent = t(editingRecord ? "admin.editor.edit" : "admin.editor.new");
+  const saveButton = document.getElementById("saveButton");
+  // While a save is running the button shows progress instead.
+  if (!saveButton.disabled) saveButton.textContent = t(editingRecord ? "admin.update" : "admin.save");
+}
+
 function resetForm() {
   entryForm.reset();
   document.getElementById("entryId").value = "";
@@ -353,9 +349,9 @@ function resetForm() {
   document.getElementById("pinnedInput").checked = false;
   document.getElementById("pinOrderInput").value = "1";
   document.getElementById("pinExpiresInput").value = "";
-  document.getElementById("editorTitle").textContent = "Magdagdag ng Bagong Entry";
+  editingRecord = false;
+  renderEditorHeading();
   document.getElementById("cancelEditButton").classList.add("hidden");
-  document.getElementById("saveButton").textContent = "I-save ang Entry";
   configureEntryFields();
 }
 
@@ -385,9 +381,9 @@ function editRecord(id) {
   document.getElementById("orderInput").value = item.order || 0;
   document.getElementById("publishedInput").checked = String(item.published).toLowerCase() === "true";
 
-  document.getElementById("editorTitle").textContent = "I-edit ang Entry";
+  editingRecord = true;
+  renderEditorHeading();
   document.getElementById("cancelEditButton").classList.remove("hidden");
-  document.getElementById("saveButton").textContent = "I-update ang Entry";
   configureEntryFields();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -396,11 +392,11 @@ async function deleteRecord(id) {
   const item = records.find((record) => String(record.id) === String(id));
   if (!item) return;
 
-  if (!window.confirm(`Talagang tatanggalin ang “${item.title}”? Hindi na ito maibabalik.`)) return;
+  if (!window.confirm(t("admin.delete.confirm", { title: item.title }))) return;
 
   try {
     await jsonp({ action: "delete", section: activeSection, id });
-    showToast("Natanggal na ang entry.");
+    showToast(t("admin.delete.done"));
     resetForm();
     await loadRecords();
   } catch (error) {
@@ -449,7 +445,7 @@ async function uploadChunkWithRetry({ uploadId, index, total, chunk, onProgress 
   }
 
   throw new Error(
-    `Hindi ma-upload ang bahagi ${index + 1} sa ${total}. ${lastError?.message || "Subukang muli."}`
+    t("admin.err.chunk", { index: index + 1, total, reason: lastError?.message || t("admin.err.retry") })
   );
 }
 
@@ -502,10 +498,10 @@ async function uploadLongContent(content, onProgress) {
     }, 30000);
 
     if (!verified.data?.complete) {
-      throw new Error("Hindi nakumpleto ang pag-upload ng dokumento. Subukang i-save muli.");
+      throw new Error(t("admin.be.uploadIncomplete"));
     }
   } else if (!status.data?.complete) {
-    throw new Error("Hindi nakumpleto ang pag-upload ng dokumento. Subukang i-save muli.");
+    throw new Error(t("admin.be.uploadIncomplete"));
   }
 
   return uploadId;
@@ -516,12 +512,12 @@ async function saveRecord(event) {
 
   const content = document.getElementById("contentInput").value.trim();
   if (content.length > 45000) {
-    showToast("Masyadong mahaba ang nilalaman. Hanggang 45,000 characters lamang.");
+    showToast(t("admin.toast.tooLong"));
     return;
   }
 
   if (INTERNAL_DOCUMENT_SECTIONS.has(activeSection) && !content && !document.getElementById("urlInput").value.trim()) {
-    showToast("Maglagay ng buong nilalaman o external link.");
+    showToast(t("admin.be.needContent"));
     return;
   }
 
@@ -533,7 +529,7 @@ async function saveRecord(event) {
   const memorandumSubject = document.getElementById("memoSubjectInput").value.trim();
 
   if (hasAutoNumber && requestedPublished && !autoNumber && !manualNumber) {
-    showToast("Maglagay ng manual na numero o piliin ang awtomatikong numbering.");
+    showToast(t("admin.toast.needNumber"));
     return;
   }
 
@@ -561,22 +557,19 @@ async function saveRecord(event) {
   };
 
   const button = document.getElementById("saveButton");
-  const originalText = button.textContent;
   button.disabled = true;
-  button.textContent = "Sine-save…";
+  button.textContent = t("admin.saving");
 
   try {
     let uploadId = "";
     if (content) {
-      button.textContent = "Inihahanda ang nilalaman…";
+      button.textContent = t("admin.preparing");
       uploadId = await uploadLongContent(content, (current, total, attempt) => {
-        button.textContent = attempt > 1
-          ? `Muling ina-upload ang bahagi ${current} sa ${total}…`
-          : `Ina-upload ang bahagi ${current} sa ${total}…`;
+        button.textContent = t(attempt > 1 ? "admin.reuploadPart" : "admin.uploadPart", { current, total });
       });
     }
 
-    button.textContent = "Tinatapos ang pag-save…";
+    button.textContent = t("admin.finishing");
     const result = await jsonp({
       action: "upsert",
       section: activeSection,
@@ -585,14 +578,14 @@ async function saveRecord(event) {
     }, 60000);
 
     const assignedNumber = result.data && result.data.number ? ` ${result.data.number}` : "";
-    showToast(payload.id ? `Na-update na ang entry.${assignedNumber}` : `Nagawa na ang bagong entry.${assignedNumber}`);
+    showToast(t(payload.id ? "admin.toast.updated" : "admin.toast.created", { number: assignedNumber }));
     resetForm();
     await loadRecords();
   } catch (error) {
     showToast(error.message);
   } finally {
     button.disabled = false;
-    button.textContent = originalText;
+    renderEditorHeading();
   }
 }
 
@@ -612,7 +605,7 @@ async function loadSettings() {
     document.getElementById("defaultSignatoryNameInput").value = settings.defaultSignatoryName || settings.mayorName || "";
     document.getElementById("defaultSignatoryPositionInput").value = settings.defaultSignatoryPosition || "";
     document.getElementById("mayorNameInput").value = settings.mayorName || "";
-    document.getElementById("meetingButtonLabelInput").value = settings.meetingButtonLabel || "Makipagpulong kay Mayor";
+    document.getElementById("meetingButtonLabelInput").value = settings.meetingButtonLabel || translate("fil", "settings.meetingButtonLabel");
     document.getElementById("meetingUrlInput").value = settings.meetingUrl || "";
     document.getElementById("footerTextInput").value = settings.footerText || "";
   } catch (error) {
@@ -643,16 +636,16 @@ async function saveSettings(event) {
 
   const button = document.getElementById("saveSettingsButton");
   button.disabled = true;
-  button.textContent = "Sine-save…";
+  button.textContent = t("admin.saving");
 
   try {
     await jsonp({ action: "saveSettings", payload: JSON.stringify(settings) });
-    showToast("Na-save na ang mga larawan at setting ng website.");
+    showToast(t("admin.set.saved"));
   } catch (error) {
     showToast(error.message);
   } finally {
     button.disabled = false;
-    button.textContent = "I-save ang mga Setting";
+    button.textContent = t("admin.set.save");
   }
 }
 
@@ -672,7 +665,7 @@ function switchSection(section) {
     return;
   }
 
-  document.getElementById("editorEyebrow").textContent = SECTION_NAMES[section];
+  document.getElementById("editorEyebrow").textContent = sectionName(section);
   resetForm();
   loadRecords();
 }
@@ -715,6 +708,17 @@ document.getElementById("contentInput").addEventListener("keydown", (event) => {
     event.preventDefault();
     applyDocumentFormatting("italic");
   }
+});
+
+// Re-render the text that this script (rather than the markup) owns.
+onLangChange(() => {
+  document.getElementById("editorEyebrow").textContent = sectionName(activeSection);
+  document.getElementById("recordsTitle").textContent = sectionName(activeSection);
+  renderEditorHeading();
+  configureEntryFields();
+  if (recordsLoaded) renderRecords();
+  const settingsButton = document.getElementById("saveSettingsButton");
+  if (!settingsButton.disabled) settingsButton.textContent = t("admin.set.save");
 });
 
 configureEntryFields();

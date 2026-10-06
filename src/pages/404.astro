@@ -1,17 +1,20 @@
 ---
 import Layout from "../components/Layout.astro";
 import { getEgovData } from "../lib/data";
+import { i18n, t } from "../lib/i18n";
 import { withBase } from "../lib/url";
 
 const { settings } = await getEgovData();
 ---
 
-<Layout title="Hindi Makita ang Pahina" settings={settings} noindex>
+<Layout titleKey="notFound.title" settings={settings} noindex>
   <main class="section">
     <div class="container">
       <div class="error-state">
-        Hindi makita ang pahinang iyong hinahanap.
-        <p><a class="button button-secondary" href={withBase("/")}>← Bumalik sa Unang Pahina</a></p>
+        <span {...i18n("notFound.message")}>{t("notFound.message")}</span>
+        <p>
+          <a class="button button-secondary" href={withBase("/")} {...i18n("archive.back")}>{t("archive.back")}</a>
+        </p>
       </div>
     </div>
   </main>

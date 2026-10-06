@@ -1,0 +1,18 @@
+---
+import { i18n, t, type MessageKey } from "../lib/i18n";
+
+/**
+ * A piece of interface text that follows the chosen language:
+ * `<I18n k="admin.logout" />` renders `<span data-i18n="admin.logout">…</span>`.
+ * Use `as` for another tag and pass any other attribute straight through.
+ */
+interface Props {
+  k: MessageKey;
+  as?: string;
+  [attribute: string]: unknown;
+}
+
+const { k, as: Tag = "span", ...attributes } = Astro.props;
+---
+
+<Tag {...attributes} {...i18n(k)}>{t(k)}</Tag>

@@ -1,4 +1,5 @@
 ---
+import { i18nAttr, t } from "../lib/i18n";
 import { resolveImage } from "../lib/images";
 
 /** The round seal in the header/footer: the uploaded logo, else "LS". */
@@ -7,13 +8,13 @@ interface Props {
   alt?: string;
 }
 
-const { logoUrl, alt = "Selyo ng Los Santos" } = Astro.props;
+const { logoUrl, alt } = Astro.props;
 const logo = await resolveImage(logoUrl, 96);
 ---
 
 {
   logo ? (
-    <span class="brand-seal has-image" aria-hidden="true"><img src={logo} alt={alt} /></span>
+    <span class="brand-seal has-image" aria-hidden="true"><img src={logo} alt={alt ?? t("brand.sealAlt")} {...(alt ? {} : i18nAttr({ alt: "brand.sealAlt" }))} /></span>
   ) : (
     <span class="brand-seal" aria-hidden="true">LS</span>
   )

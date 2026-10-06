@@ -1,7 +1,9 @@
 ---
+import { i18n, i18nAttr, t } from "../lib/i18n";
 import { documentContentToHtml } from "../lib/markdown";
 import { isKiosk } from "../lib/kiosk";
 import { resolveImage } from "../lib/images";
+import { LABELS } from "../lib/sections";
 import { withBase } from "../lib/url";
 import type { EgovRecord, SiteSettings } from "../lib/types";
 import BrandSeal from "./BrandSeal.astro";
@@ -29,12 +31,12 @@ const covers = await Promise.all(forms.map((form) => resolveImage(form.image, 12
       <a class="brand" href={withBase("/")}>
         <BrandSeal logoUrl={settings.logoUrl} />
         <span>
-          <strong>Pamahalaang Panglungsod ng Los Santos</strong>
-          <small>Online na Form</small>
+          <strong {...i18n("home.eyebrow")}>{t("home.eyebrow")}</strong>
+          <small {...i18n(LABELS.Forms.singular)}>{t(LABELS.Forms.singular)}</small>
         </span>
       </a>
       <div class="viewer-actions">
-        <button class="viewer-close" id="closeDocumentViewer" type="button" aria-label="Isara ang detalye">×</button>
+        <button class="viewer-close" id="closeDocumentViewer" type="button" aria-label={t("viewer.close")} {...i18nAttr({ "aria-label": "viewer.close" })}>×</button>
       </div>
     </header>
     <div class="viewer-scroll">
@@ -46,30 +48,37 @@ const covers = await Promise.all(forms.map((form) => resolveImage(form.image, 12
 {
   forms.map((form, index) => (
     <template data-form-id={form.id}>
-      {covers[index] && <img class="official-document-cover" src={covers[index]} alt={`Larawan para sa ${form.title}`} />}
+      {covers[index] && (
+        <img
+          class="official-document-cover"
+          src={covers[index]}
+          alt={t("viewer.coverAlt", { title: form.title })}
+          {...i18nAttr({ alt: "viewer.coverAlt" }, { title: form.title })}
+        />
+      )}
       <div class="official-document-heading">
-        <span class="eyebrow">Serbisyong Online</span>
+        <span class="eyebrow" {...i18n("viewer.eyebrow")}>{t("viewer.eyebrow")}</span>
         <h2 id="viewerTitle">{form.title}</h2>
       </div>
       <div
         class="official-document-body"
-        set:html={documentContentToHtml(
-          form.content || form.description || "Basahin ang mga detalye bago buksan ang form.",
-          { links: !isKiosk },
-        )}
+        set:html={documentContentToHtml(form.content || form.description, {
+          links: !isKiosk,
+          emptyKey: "viewer.defaultBody",
+        })}
       />
       <div class="official-document-footer">
         {isKiosk && form.url && (
-          <p class="external-placeholder-note">
-            Ang online na form na ito ay idadagdag sa kiosk sa lalong madaling panahon.
+          <p class="external-placeholder-note" {...i18n("viewer.kioskNote")}>
+            {t("viewer.kioskNote")}
           </p>
         )}
         <ExternalAction
           id="viewerExternalLink"
           url={form.url}
-          label="Buksan ang Form"
+          labelKey={LABELS.Forms.externalAction}
           variant="primary"
-          placeholderLabel="Malapit nang magamit"
+          placeholderKey="kiosk.comingSoon"
         />
       </div>
     </template>

@@ -72,12 +72,44 @@ src/
   admin/                   dashboard, non-kiosk build only (admin.js is still plain JS)
   components/              Layout, DocumentCard, FormViewer, ExternalAction, ...
   lib/                     data loading, normalising, sorting, markdown, image handling
-  scripts/                 small client scripts: form pop-out, archive search/sort
+  lib/i18n.ts, messages/   localization: helpers and the Filipino / English catalogs
+  scripts/                 small client scripts: form pop-out, archive search/sort, language switching
   styles/global.css
 google-apps-script/Code.gs the sheet backend (see the warning below)
 fixtures/live-all.json     a saved backend response, used by the tests
 legacy/                    the previous static site, kept for reference
 ```
+
+## Languages
+
+The interface is available in Filipino (Tagalog, the default) and English. A
+dropdown in the footer of every page, including the admin dashboard, switches
+between them, and the choice is remembered in the browser.
+
+- **What is translated:** buttons, headings, labels, dates, placeholders, error
+  messages and the admin dashboard. **What is not:** content typed into the
+  Google Sheet (titles, descriptions, document bodies, names) is shown as
+  written in both languages. The site settings that ship with default wording
+  (subtitle, hero text, meeting button, footer text) are translated only while
+  they still hold that default; once edited in the dashboard they are shown
+  as written.
+- **How it works:** pages are still built entirely in Filipino, so there is one
+  build, one set of URLs and the kiosk hosting is unaffected. Translatable
+  elements carry `data-i18n*` attributes and `src/scripts/i18n.ts` swaps the
+  text in the browser. Nothing is fetched at runtime.
+- **Changing or adding text:** edit `src/lib/messages/fil.ts` and
+  `src/lib/messages/en.ts`. `en.ts` is typed from `fil.ts`, so `astro check`
+  fails if a key is missing, and `npm test` checks that both languages use the
+  same `{placeholders}`. In a page, write
+  `<h2 {...i18n("some.key")}>{t("some.key")}</h2>`; for attributes use
+  `i18nAttr({ placeholder: "some.key" })`.
+- **Adding a language:** add it to `LANGS` and `LANG_NAMES` in
+  `src/lib/i18n.ts`, create its catalog, and register it in `MESSAGES`.
+- **Backend errors:** the dashboard shows errors from `Code.gs`, which are
+  Filipino sentences. The `admin.be.*` messages must match them exactly, so
+  if you reword an error in `Code.gs`, reword it in `fil.ts` too.
+- **Kiosk:** the kiosk browser may not keep `localStorage`, in which case it
+  simply opens in Filipino each time.
 
 ## Tests
 

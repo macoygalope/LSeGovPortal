@@ -1,0 +1,12 @@
+---
+import { DEFAULT_LANG, LANGS, LANG_NAMES, i18n, t } from "../lib/i18n";
+
+/** The language dropdown shown in the footer; scripts/language.ts drives it. */
+---
+
+<label class="language-switcher">
+  <span {...i18n("lang.label")}>{t("lang.label")}</span>
+  <select data-language-select>
+    {LANGS.map((lang) => <option value={lang} selected={lang === DEFAULT_LANG}>{LANG_NAMES[lang]}</option>)}
+  </select>
+</label>
