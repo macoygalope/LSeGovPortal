@@ -110,6 +110,9 @@ database.
 - `settings`: the site settings, one row per key.
 - `numbering`: the last sequence handed out per numbered section (executive
   orders, memorandums, resolutions) and year.
+- `site_admins`: `citizenid`, `name`, `created_at`. The citizens allowed to sign
+  in to the admin dashboard. It isn't part of the sheet, so `db:import` and
+  `db:export` leave it alone: back it up with the database file.
 - Views `forms`, `announcements`, `executive_orders`, `memorandums` and
   `resolutions`: one read-only view per section with just its own columns, for
   browsing in any SQLite tool.
@@ -145,7 +148,8 @@ database.
 ## Admin dashboard
 
 ```sh
-npm run admin        # http://127.0.0.1:4322/admin
+npm run admins -- add ABC12345 "Your Name"   # once: put yourself on the list
+npm run admin                                # http://127.0.0.1:4322/admin
 ```
 
 Adds, edits, publishes and deletes forms, announcements, executive orders,
@@ -159,13 +163,37 @@ in this command: the page is in neither build, and `astro.config.mjs` doesn't
 know about it. The same process serves the site, so its pages show a saved
 change on the next reload.
 
-- **Log in** with the token printed at startup (new each run), or set
-  `EGOV_ADMIN_TOKEN` (16 characters or more) in `.env` to keep one. It travels
-  in a header, not a cookie, so another site can't make your browser send it.
+- **Signing in is by citizen ID.** Only citizens in the `site_admins` table get
+  in (ID matched without regard to capitals). Inside the game the kiosk puts the
+  ID on the URL (`?citizenId=`) and the dashboard checks it without asking;
+  anywhere else, type it in, or open `/admin?citizenId=ABC12345`. A sign-in
+  lasts 12 hours or until the server stops, and is checked against the list on
+  every request, so removing someone signs them out at once. Their name shows at
+  the top of the page, and sign-ins and refusals are printed in the terminal.
+- **Managing the list** is done from the command line, so the first admin doesn't
+  have to be let in by someone who isn't one yet: `npm run admins -- list`,
+  `-- add <citizenId> "<name>"`, `-- remove <citizenId>`. An empty list means
+  nobody can sign in; `npm run admin` says so at startup.
+- **A citizen ID is not a password.** It proves nothing by itself: the ID comes
+  from the URL, and it is printed on the identity card the kiosk shows. Anyone
+  who can reach the server and knows an admin's ID can sign in as them. That is
+  acceptable for the default, which listens on this machine only. Failed
+  sign-ins are rate limited (5 a minute per address), but don't expose it more
+  widely without something that is a secret: a second factor, or an ID the game
+  signs.
+- **Trying it without the game.** In development, `PUBLIC_MOCK_CITIZEN_ID` in
+  `.env` (see `.env.example`) is the citizen the dashboard assumes when the
+  browser has none: put them on the list with `npm run admins -- add ...` and
+  `/admin` signs them in on load. An ID on the URL, or one already kept for the
+  tab, wins, and signing out turns the mock off for that tab. No build contains
+  it (`import.meta.env.DEV` is false in a build, which removes it), and it lets
+  nobody in unless that citizen is on the list. Leave it unset anywhere real
+  people use the dashboard.
 - **Local only by default.** `--host` opens it to other machines over plain
-  HTTP: anyone with the token can then edit the site. `--port` and
-  `--db <file>` pick another port or database. The database has to exist
-  already (`db:import`, or `db:migrate` for an empty one).
+  HTTP, which makes the point above real. `--port` and `--db <file>` pick
+  another port or database. The database has to exist already (`db:import`, or
+  `db:migrate` for an empty one); running the dashboard brings an older one up
+  to the current schema, and a build then wants that schema too.
 - **Saving is not publishing.** A change reaches the kiosk only after
   `npm run build:kiosk` and copying `dist/`. Drafts never reach a build.
 - **Numbering.** An executive order, memorandum or resolution is numbered the
@@ -199,6 +227,7 @@ src/
   lib/settings.ts          read / save the site settings
   lib/announcements.ts     the same for announcements only (the dashboard uses records.ts)
   lib/admin-api.ts         the dashboard's JSON API; admin-integration.ts adds it to the dev server
+  lib/admins.ts            the site_admins whitelist; admin-auth.ts holds sessions and the sign-in limiter
   admin/                   the dashboard page and its script, served only by npm run admin
   lib/i18n.ts, messages/   localization: helpers and the Filipino / English catalogs
   scripts/                 small client scripts: form pop-out, archive search/sort, language switching
@@ -206,6 +235,7 @@ src/
 scripts/build.mjs          build wrapper (staging folder, swapped into dist/ on success)
 scripts/db.mjs             db:import / db:export / db:migrate
 scripts/admin.mjs          npm run admin
+scripts/admins.mjs         npm run admins: list / add / remove who may sign in
 data/egov.db               the local database; created by db:import, not committed
 google-apps-script/Code.gs the old sheet backend; the site no longer uses it
 fixtures/live-all.json     a saved backend response: seeds the database, used by the tests

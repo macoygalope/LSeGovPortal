@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 
-import { fetchCitizenIdentity, getCurrentCitizenId } from "./citizen.ts";
+import { devMockCitizenId, fetchCitizenIdentity, forgetCurrentCitizenId, getCurrentCitizenId } from "./citizen.ts";
 
 const globals = globalThis as Record<string, unknown>;
 
@@ -59,6 +59,84 @@ describe("getCurrentCitizenId", () => {
 
   it("returns an empty string without a window", () => {
     assert.equal(getCurrentCitizenId(), "");
+    assert.equal(getCurrentCitizenId("MOCK0001"), "");
+  });
+});
+
+describe("the development mock citizen", () => {
+  it("stands in when the browser has no id", () => {
+    browser("");
+    assert.equal(getCurrentCitizenId("MOCK0001"), "MOCK0001");
+    // It is a fallback, not something stashed for later: nothing is written.
+    const stored = browser("");
+    getCurrentCitizenId("MOCK0001");
+    assert.deepEqual(stored, {});
+  });
+
+  it("gives way to an id on the URL, and to one stashed from an earlier page", () => {
+    browser("?citizenId=REAL0001");
+    assert.equal(getCurrentCitizenId("MOCK0001"), "REAL0001");
+
+    browser("", { "lsegov-portal:citizenId": "REAL0002" });
+    assert.equal(getCurrentCitizenId("MOCK0001"), "REAL0002");
+  });
+
+  it("stays out of the way once the citizen was forgotten, until an id is given again", () => {
+    browser("", { "lsegov-portal:citizenIdForgotten": "1" });
+    assert.equal(getCurrentCitizenId("MOCK0001"), "");
+
+    const stored = browser("?citizenId=REAL0001", { "lsegov-portal:citizenIdForgotten": "1" });
+    (globalThis as { window?: { sessionStorage: { removeItem?: (key: string) => void } } }).window!.sessionStorage.removeItem = (key) => {
+      delete stored[key];
+    };
+    assert.equal(getCurrentCitizenId("MOCK0001"), "REAL0001");
+    assert.equal(stored["lsegov-portal:citizenIdForgotten"], undefined);
+  });
+
+  it("is used when sessionStorage is blocked, since there is nothing to forget it in", () => {
+    browser("", {}, false);
+    assert.equal(getCurrentCitizenId("MOCK0001"), "MOCK0001");
+  });
+
+  it("is not configured outside development: plain Node has no import.meta.env, and a build has DEV off", () => {
+    assert.equal(devMockCitizenId(), "");
+    browser("");
+    assert.equal(getCurrentCitizenId(), "");
+  });
+});
+
+describe("forgetCurrentCitizenId", () => {
+  /** A browser that also remembers what replaceState was asked to show. */
+  function browserAt(href: string, stored: Record<string, string>) {
+    browser("", stored);
+    const win = globals.window as { location: { href: string; search: string }; history: object; sessionStorage: object };
+    win.location.href = href;
+    win.location.search = new URL(href).search;
+    const shown: string[] = [];
+    win.history = { state: null, replaceState: (_state: unknown, _title: string, url: URL) => shown.push(String(url)) };
+    (win.sessionStorage as { removeItem?: (key: string) => void }).removeItem = (key) => {
+      delete stored[key];
+    };
+    return shown;
+  }
+
+  it("clears the stashed id and takes the id off the address", () => {
+    const stored = { "lsegov-portal:citizenId": "ABC12345" };
+    const shown = browserAt("http://localhost:4322/admin?citizenId=ABC12345&x=1", stored);
+    forgetCurrentCitizenId();
+    // The id is gone, and a note says it was forgotten on purpose (so a dev mock stays off).
+    assert.deepEqual(stored, { "lsegov-portal:citizenIdForgotten": "1" });
+    assert.deepEqual(shown, ["http://localhost:4322/admin?x=1"]);
+  });
+
+  it("leaves an address without an id alone", () => {
+    const shown = browserAt("http://localhost:4322/admin", {});
+    forgetCurrentCitizenId();
+    assert.deepEqual(shown, []);
+  });
+
+  it("does nothing without a window", () => {
+    assert.doesNotThrow(() => forgetCurrentCitizenId());
   });
 });
 

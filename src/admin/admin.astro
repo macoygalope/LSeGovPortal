@@ -1,8 +1,9 @@
 ---
 // Admin dashboard. Only `npm run admin` serves it (scripts/admin.mjs injects
 // the route, see src/lib/admin-integration.ts): it writes to the local
-// database, so it is in no build. Client-side: admin.js talks to the admin API
-// (src/lib/admin-api.ts) from the browser with the admin token.
+// database, so it is in no build. Client-side: admin.js signs in by citizen ID
+// (checked against the site_admins whitelist) and talks to the admin API
+// (src/lib/admin-api.ts) with the session it gets back.
 import "@fontsource/inter/latin-400.css";
 import "@fontsource/inter/latin-500.css";
 import "@fontsource/inter/latin-600.css";
@@ -52,11 +53,21 @@ const ariaLabel = (key: MessageKey) => ({ "aria-label": t(key), ...i18nAttr({ "a
       <I18n as="p" k="admin.login.intro" />
       <form id="loginForm" class="admin-login-form">
         <label>
-          Admin Token
-          <input id="adminToken" type="password" autocomplete="current-password" required />
+          <I18n k="admin.login.citizenId" />
+          <input
+            id="citizenIdInput"
+            type="text"
+            maxlength="64"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            required
+            {...placeholder("admin.login.citizenIdPlaceholder")}
+          />
         </label>
-        <button class="button button-primary" type="submit"><I18n k="admin.login.submit" /></button>
+        <button class="button button-primary" id="loginButton" type="submit"><I18n k="admin.login.submit" /></button>
       </form>
+      <p class="helper-text" id="loginStatus" role="status" hidden></p>
       <I18n as="p" class="helper-text" k="admin.login.helper" />
     </section>
 
@@ -66,6 +77,7 @@ const ariaLabel = (key: MessageKey) => ({ "aria-label": t(key), ...i18nAttr({ "a
           <I18n as="span" class="eyebrow" k="admin.dash.eyebrow" />
           <h1>Los Santos eGov Dashboard</h1>
           <I18n as="p" k="admin.dash.intro" />
+          <p class="admin-who" id="adminWho"></p>
         </div>
         <button class="button button-danger button-small" id="logoutButton" type="button"><I18n k="admin.logout" /></button>
       </div>

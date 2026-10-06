@@ -12,6 +12,9 @@
  * because the Sheet fills them on every tab -- the live data has `subject` on
  * forms and announcements too -- and a narrower schema would drop that on
  * import. The per-section views below give the one-tab-per-section look back.
+ *
+ * Migration 2 is the one table with no sheet equivalent: `site_admins`, the
+ * whitelist for the admin dashboard.
  */
 export const MIGRATIONS: readonly string[] = [
   // 1: initial schema
@@ -127,5 +130,19 @@ CREATE VIEW resolutions AS
          content, auto_number, publication_year, publication_sequence, published_at,
          created_at, updated_at
   FROM records WHERE section = 'Resolutions';
+`,
+
+  // 2: who may use the admin dashboard
+  `
+-- The citizens allowed to sign in to the admin dashboard, by the citizenid
+-- the game gives them. Nothing like it exists in the sheet, so an import never
+-- touches it. NOCASE because a citizenid is the same person however it is typed.
+CREATE TABLE site_admins (
+  citizenid  TEXT PRIMARY KEY COLLATE NOCASE,
+  name       TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  CONSTRAINT citizenid_not_empty CHECK (citizenid <> ''),
+  CONSTRAINT name_not_empty CHECK (name <> '')
+) STRICT;
 `,
 ];

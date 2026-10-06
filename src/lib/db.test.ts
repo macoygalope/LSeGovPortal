@@ -50,7 +50,36 @@ describe("schema", () => {
     const db = memoryDb();
     assert.equal(db.prepare("PRAGMA user_version").get()!.user_version, MIGRATIONS.length);
     const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all();
-    assert.deepEqual(tables.map((t) => t.name), ["numbering", "records", "settings"]);
+    assert.deepEqual(tables.map((t) => t.name), ["numbering", "records", "settings", "site_admins"]);
+  });
+
+  it("upgrades a database made before the admin whitelist, keeping its content", () => {
+    const dir = mkdtempSync(join(tmpdir(), "egov-db-"));
+    try {
+      const file = join(dir, "egov.db");
+      // The schema as it was when only migration 1 existed.
+      const old = new DatabaseSync(file);
+      old.exec(MIGRATIONS[0]!);
+      old.exec("PRAGMA user_version = 1");
+      old.exec("INSERT INTO records (section, id, title, content) VALUES ('Announcements', 'a', 'T', 'c')");
+      old.close();
+
+      const upgraded = openDb(file);
+      open.push(upgraded);
+      assert.equal(upgraded.prepare("PRAGMA user_version").get()!.user_version, MIGRATIONS.length);
+      assert.equal(upgraded.prepare("SELECT count(*) AS n FROM records").get()!.n, 1);
+      assert.equal(upgraded.prepare("SELECT count(*) AS n FROM site_admins").get()!.n, 0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps site admins through a replacing import, which only replaces the sheet's content", () => {
+    const db = memoryDb();
+    db.prepare("INSERT INTO site_admins (citizenid, name) VALUES ('ABC12345', 'Mayor')").run();
+    importPayload(db, payload({ Announcements: [row({})] }));
+    importPayload(db, payload(), { replace: true });
+    assert.equal(db.prepare("SELECT count(*) AS n FROM site_admins").get()!.n, 1);
   });
 
   it("accepts exactly the sections in types.ts", () => {

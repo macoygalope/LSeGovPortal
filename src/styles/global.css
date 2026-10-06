@@ -1313,6 +1313,12 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   background: rgba(255, 255, 255, 0.75);
   font-size: 12px;
 }
+.admin-title-row p.admin-who {
+  margin-top: 8px;
+  color: var(--navy-2);
+  font-size: 13px;
+  font-weight: 600;
+}
 .admin-warning {
   margin: 0 0 14px;
   padding: 10px 14px;
@@ -1322,7 +1328,9 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   color: #7c5712;
   font-size: 12px;
 }
-[aria-invalid="true"] {
+/* Spelled out so it outranks `input:focus`: the field is focused when it is marked. */
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
   border-color: var(--red);
   box-shadow: 0 0 0 3px rgba(185, 54, 54, 0.12);
 }

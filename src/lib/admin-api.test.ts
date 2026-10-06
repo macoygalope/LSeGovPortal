@@ -5,9 +5,10 @@ import { afterEach, describe, it } from "node:test";
 import type { DatabaseSync } from "node:sqlite";
 
 import { ADMIN_API_PATH, createAdminApi } from "./admin-api.ts";
+import { addAdmin, removeAdmin } from "./admins.ts";
 import { openDb } from "./db.ts";
 
-const TOKEN = "a-long-enough-test-token";
+const CITIZEN = "ABC12345";
 
 const cleanup: (() => unknown)[] = [];
 afterEach(async () => {
@@ -17,31 +18,55 @@ afterEach(async () => {
 interface Harness {
   db: DatabaseSync;
   base: string;
+  /** Changes reported to onChange. */
   changes: number;
-  call(method: string, path: string, options?: CallOptions): Promise<{ status: number; body: any }>;
+  /** What the API told its log. */
+  logs: string[];
+  /** The session token of the admin `start` signed in. */
+  token: string;
+  /** The API's clock, which the test moves. */
+  clock: { now: number };
+  call(method: string, path: string, options?: CallOptions): Promise<{ status: number; body: any; headers: Headers }>;
+  /** Signs in as `citizenId` and returns the answer, whatever it is. */
+  login(citizenId: unknown, options?: CallOptions): Promise<{ status: number; body: any; headers: Headers }>;
 }
 
 interface CallOptions {
   body?: unknown;
   rawBody?: string;
+  /** The session token to send; the signed-in admin's unless given, none for null. */
   token?: string | null;
   headers?: Record<string, string>;
 }
 
-/** The API on a real socket and an in-memory database. `mount` serves it the way Vite's connect does. */
-async function start({ mount = false, onChange }: { mount?: boolean; onChange?: () => void } = {}): Promise<Harness> {
+interface StartOptions {
+  /** Serve it the way Vite's connect does, with the mount path stripped from the url. */
+  mount?: boolean;
+  onChange?: () => void;
+  /** Sign in as the test admin (the default). */
+  signedIn?: boolean;
+  sessionMs?: number;
+  maxFailedLogins?: number;
+}
+
+/** The API on a real socket and an in-memory database that has one admin on its whitelist. */
+async function start({ mount = false, onChange, signedIn = true, sessionMs, maxFailedLogins }: StartOptions = {}): Promise<Harness> {
   const db = openDb(":memory:");
   cleanup.push(() => db.close());
+  addAdmin(db, CITIZEN, "Test Admin");
 
-  const harness = { db, changes: 0 } as Harness;
+  const harness = { db, changes: 0, logs: [], token: "", clock: { now: 1_000_000 } } as unknown as Harness;
   const handler = createAdminApi({
     db,
-    token: TOKEN,
     databaseName: "test.db",
     onChange: () => {
       harness.changes += 1;
       onChange?.();
     },
+    log: (message) => harness.logs.push(message),
+    sessionMs,
+    maxFailedLogins,
+    now: () => harness.clock.now,
   });
   const server: Server = createServer((req: IncomingMessage & { originalUrl?: string }, res: ServerResponse) => {
     if (mount) {
@@ -55,7 +80,7 @@ async function start({ mount = false, onChange }: { mount?: boolean; onChange?: 
   server.closeAllConnections?.();
 
   harness.base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-  harness.call = async (method, path, { body, rawBody, token = TOKEN, headers = {} } = {}) => {
+  harness.call = async (method, path, { body, rawBody, token = harness.token, headers = {} } = {}) => {
     const response = await fetch(`${harness.base}${ADMIN_API_PATH}${path}`, {
       method,
       headers: {
@@ -65,18 +90,149 @@ async function start({ mount = false, onChange }: { mount?: boolean; onChange?: 
       },
       body: rawBody ?? (body === undefined ? undefined : JSON.stringify(body)),
     });
-    return { status: response.status, body: await response.json() };
+    return { status: response.status, body: await response.json(), headers: response.headers };
   };
+  harness.login = (citizenId, options = {}) =>
+    harness.call("POST", "/login", { body: { citizenId }, token: null, ...options });
+
+  if (signedIn) {
+    const { body } = await harness.login(CITIZEN);
+    harness.token = body.data.token;
+  }
   return harness;
 }
 
 const announcement = { title: "Anunsyo", content: "Laman" };
 
-describe("the token", () => {
-  it("is needed for every request, and nothing is read or written without it", async () => {
+describe("signing in", () => {
+  it("lets a whitelisted citizen in, and says who they are", async () => {
+    const api = await start({ signedIn: false });
+    const { status, body } = await api.login(CITIZEN);
+    assert.equal(status, 200);
+    assert.equal(body.ok, true);
+    assert.deepEqual(body.data.admin, { citizenId: CITIZEN, name: "Test Admin" });
+    assert.equal(typeof body.data.token, "string");
+    assert.ok(body.data.token.length >= 40);
+    assert.equal(body.data.expiresAt, api.clock.now + 12 * 60 * 60 * 1000);
+    assert.deepEqual(api.logs, [`Test Admin (${CITIZEN}) signed in.`]);
+
+    const auth = await api.call("GET", "/auth", { token: body.data.token });
+    assert.deepEqual(auth.body, {
+      ok: true,
+      data: { authenticated: true, database: "test.db", admin: { citizenId: CITIZEN, name: "Test Admin" } },
+    });
+  });
+
+  it("finds the citizen however the id is capitalised or padded, and answers with the stored id", async () => {
+    const api = await start({ signedIn: false });
+    for (const given of ["abc12345", " ABC12345 ", "Abc12345"]) {
+      const { status, body } = await api.login(given);
+      assert.equal(status, 200, given);
+      assert.equal(body.data.admin.citizenId, CITIZEN);
+    }
+  });
+
+  it("gives each sign-in its own token", async () => {
+    const api = await start({ signedIn: false });
+    const one = (await api.login(CITIZEN)).body.data.token;
+    const two = (await api.login(CITIZEN)).body.data.token;
+    assert.notEqual(one, two);
+    assert.equal((await api.call("GET", "/auth", { token: one })).status, 200);
+    assert.equal((await api.call("GET", "/auth", { token: two })).status, 200);
+  });
+
+  it("turns away a citizen who is not on the whitelist, and says so in the log", async () => {
+    // Many bad ids from one address: lift the limit that would stop it (tested below).
+    const api = await start({ signedIn: false, maxFailedLogins: 100 });
+    for (const given of ["ZZZ99999", "ABC1234", "ABC123456", "ABC%", "ABC12345' OR '1'='1"]) {
+      const { status, body } = await api.login(given);
+      assert.equal(status, 403, JSON.stringify(given));
+      assert.equal(body.code, "notWhitelisted");
+      assert.equal(body.field, "citizenId");
+      assert.equal(body.data, undefined);
+    }
+    assert.ok(api.logs.every((line) => line.startsWith("Turned away ")));
+  });
+
+  it("takes the citizen id as text only, so a list or number can't pass for one", async () => {
+    const api = await start({ signedIn: false });
+    for (const citizenId of [[CITIZEN], { id: CITIZEN }, [[CITIZEN]], 12345, true, { toString: CITIZEN }]) {
+      const { status, body } = await api.login(citizenId);
+      assert.equal(status, 400, JSON.stringify(citizenId));
+      assert.equal(body.code, "badRequest");
+      assert.equal(body.data, undefined);
+    }
+    assert.equal(api.logs.length, 0);
+  });
+
+  it("asks for a citizen id, without counting that against the sender", async () => {
+    const api = await start({ signedIn: false, maxFailedLogins: 2 });
+    for (const body of [{}, { citizenId: "" }, { citizenId: "   " }, { citizenId: null }]) {
+      const answer = await api.call("POST", "/login", { body, token: null });
+      assert.equal(answer.status, 400, JSON.stringify(body));
+      assert.equal(answer.body.code, "needCitizenId");
+    }
+    assert.equal((await api.login(CITIZEN)).status, 200);
+  });
+
+  it("logs a refused id on one line, whatever it contains", async () => {
+    const api = await start({ signedIn: false });
+    await api.login("evil\nSigned in as Mayor (ABC12345).");
+    assert.equal(api.logs.length, 1);
+    assert.ok(!api.logs[0]!.includes("\n"));
+    assert.ok(api.logs[0]!.startsWith('Turned away "evil\\nSigned in'));
+  });
+
+  it("makes an address that keeps failing wait, then lets it try again", async () => {
+    const api = await start({ signedIn: false, maxFailedLogins: 5 });
+    for (let i = 0; i < 5; i += 1) assert.equal((await api.login(`NOPE000${i}`)).status, 403);
+
+    // Even the right id is refused while it waits.
+    const refused = await api.login(CITIZEN);
+    assert.equal(refused.status, 429);
+    assert.equal(refused.body.code, "tooManyAttempts");
+    assert.equal(refused.body.vars.seconds, 60);
+    assert.equal(refused.headers.get("retry-after"), "60");
+    assert.equal(api.logs.filter((line) => line.includes("signed in")).length, 0);
+
+    api.clock.now += 59_000;
+    assert.equal((await api.login(CITIZEN)).status, 429);
+    api.clock.now += 1_001;
+    assert.equal((await api.login(CITIZEN)).status, 200);
+  });
+
+  it("forgets earlier failures once someone gets in", async () => {
+    const api = await start({ signedIn: false, maxFailedLogins: 5 });
+    for (let round = 0; round < 3; round += 1) {
+      for (let i = 0; i < 4; i += 1) assert.equal((await api.login("NOPE0000")).status, 403);
+      assert.equal((await api.login(CITIZEN)).status, 200);
+    }
+  });
+
+  it("only takes a JSON body, from this dashboard's own origin", async () => {
+    const api = await start({ signedIn: false });
+    const plain = await fetch(`${api.base}${ADMIN_API_PATH}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ citizenId: CITIZEN }),
+    });
+    assert.equal(plain.status, 415);
+
+    const other = await api.login(CITIZEN, { headers: { Origin: "https://evil.example" } });
+    assert.equal(other.status, 403);
+    assert.equal(other.body.code, "forbidden");
+
+    assert.equal((await api.login(CITIZEN, { headers: { Origin: api.base } })).status, 200);
+    assert.equal((await api.call("GET", "/login", { token: null })).status, 401);
+  });
+});
+
+describe("a session", () => {
+  it("is needed for every request but signing in, and nothing is read or written without one", async () => {
     const api = await start();
     const requests: [string, string, unknown?][] = [
       ["GET", "/auth"],
+      ["POST", "/logout"],
       ["GET", "/records/Announcements"],
       ["POST", "/records/Announcements", announcement],
       ["PUT", "/records/Announcements/x", { title: "T" }],
@@ -85,10 +241,11 @@ describe("the token", () => {
       ["PUT", "/settings", { siteTitle: "T" }],
     ];
     for (const [method, path, body] of requests) {
-      for (const token of [null, "", "wrong", `${TOKEN}x`, TOKEN.slice(1)]) {
+      // The citizen id itself is no use as a token, nor is anything close to the real one.
+      for (const token of [null, "", "wrong", CITIZEN, `${api.token}x`, api.token.slice(1)]) {
         const { status, body: answer } = await api.call(method, path, { body, token });
         assert.equal(status, 401, `${method} ${path} with ${JSON.stringify(token)}`);
-        assert.deepEqual(answer, { ok: false, error: "The admin token is incorrect.", code: "wrongToken" });
+        assert.deepEqual(answer, { ok: false, error: "Sign in again.", code: "sessionExpired" });
       }
     }
     assert.equal(Number(api.db.prepare("SELECT count(*) AS n FROM records").get()!.n), 0);
@@ -97,19 +254,55 @@ describe("the token", () => {
 
   it("is accepted from a header only, not a query string", async () => {
     const api = await start();
-    const response = await fetch(`${api.base}${ADMIN_API_PATH}/auth?token=${TOKEN}`);
+    const response = await fetch(`${api.base}${ADMIN_API_PATH}/auth?token=${api.token}`);
     assert.equal(response.status, 401);
   });
 
-  it("is checked, and the database is named, on /auth", async () => {
+  it("ends when the citizen signs out", async () => {
     const api = await start();
-    const { status, body } = await api.call("GET", "/auth");
-    assert.equal(status, 200);
-    assert.deepEqual(body, { ok: true, data: { authenticated: true, database: "test.db" } });
+    const other = (await api.login(CITIZEN)).body.data.token;
+
+    const out = await api.call("POST", "/logout");
+    assert.deepEqual(out.body, { ok: true, data: { signedOut: true } });
+    assert.equal((await api.call("GET", "/auth")).status, 401);
+    assert.equal((await api.call("GET", "/auth", { token: other })).status, 200);
+    assert.ok(api.logs.includes(`Test Admin (${CITIZEN}) signed out.`));
   });
 
-  it("is required to start the API at all", () => {
-    assert.throws(() => createAdminApi({ db: openDb(":memory:"), token: "" }), /needs a token/);
+  it("runs out after the time it was given", async () => {
+    const api = await start({ sessionMs: 60_000 });
+    api.clock.now += 59_999;
+    assert.equal((await api.call("GET", "/auth")).status, 200);
+    api.clock.now += 2;
+    const { status, body } = await api.call("GET", "/auth");
+    assert.equal(status, 401);
+    assert.equal(body.code, "sessionExpired");
+  });
+
+  it("ends the moment the citizen is taken off the whitelist", async () => {
+    const api = await start();
+    assert.equal((await api.call("GET", "/records/Announcements")).status, 200);
+
+    removeAdmin(api.db, CITIZEN);
+    assert.equal((await api.call("GET", "/records/Announcements")).status, 401);
+    assert.equal((await api.call("POST", "/records/Announcements", { body: announcement })).status, 401);
+
+    // Putting them back doesn't bring the old session back; they sign in again.
+    addAdmin(api.db, CITIZEN, "Test Admin");
+    assert.equal((await api.call("GET", "/auth")).status, 401);
+    assert.equal((await api.login(CITIZEN)).status, 200);
+  });
+
+  it("follows a rename on the whitelist", async () => {
+    const api = await start();
+    api.db.prepare("UPDATE site_admins SET name = 'New Name'").run();
+    assert.equal((await api.call("GET", "/auth")).body.data.admin.name, "New Name");
+  });
+
+  it("is lost when the server restarts, because sessions live in memory", async () => {
+    const first = await start();
+    const second = await start({ signedIn: false });
+    assert.equal((await second.call("GET", "/auth", { token: first.token })).status, 401);
   });
 });
 
@@ -222,7 +415,7 @@ describe("a bad request", () => {
     const api = await start();
     const notJson = await fetch(`${api.base}${ADMIN_API_PATH}/records/Announcements`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "text/plain" },
+      headers: { Authorization: `Bearer ${api.token}`, "Content-Type": "text/plain" },
       body: JSON.stringify(announcement),
     });
     assert.equal(notJson.status, 415);
@@ -256,7 +449,7 @@ describe("a bad request", () => {
 });
 
 describe("a request from another site", () => {
-  it("is refused even with the token, and one from the dashboard's own origin is not", async () => {
+  it("is refused even with a session, and one from the dashboard's own origin is not", async () => {
     const api = await start();
     for (const origin of ["https://evil.example", "http://127.0.0.1:1", "null"]) {
       const { status, body } = await api.call("POST", "/records/Announcements", { body: announcement, headers: { Origin: origin } });

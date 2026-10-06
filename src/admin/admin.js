@@ -1,11 +1,15 @@
+import { forgetCurrentCitizenId, getCurrentCitizenId } from "../lib/citizen.ts";
 import { fil } from "../lib/messages/fil.ts";
 import { LABELS } from "../lib/sections.ts";
 import { onLangChange, t } from "../scripts/i18n.ts";
 
-// The dashboard's script. It talks to the admin API (src/lib/admin-api.ts),
-// which only `npm run admin` serves, with the admin token in a header.
+// The dashboard's script. It signs in with a citizen ID, which the admin API
+// (src/lib/admin-api.ts, served only by `npm run admin`) checks against the
+// site-admin whitelist, and then sends the session it gets back in a header.
+// The ID is the one the kiosk puts on the URL (?citizenId=), else typed in.
 
 const API = "/admin-api";
+const SESSION_KEY = "egovAdminSession";
 
 function sectionName(section) {
   return section === "Settings" ? t("admin.tab.Settings") : t(LABELS[section].plural);
@@ -40,7 +44,9 @@ let records = [];
 let recordsLoaded = false;
 let editingId = "";
 let loadSequence = 0;
-let adminToken = sessionStorage.getItem("egovAdminToken") || "";
+let adminToken = sessionStorage.getItem(SESSION_KEY) || "";
+/** Who is signed in: { citizenId, name }, from the API. */
+let currentAdmin = null;
 
 const loginPanel = document.getElementById("loginPanel");
 const dashboard = document.getElementById("dashboard");
@@ -51,6 +57,9 @@ const entryForm = document.getElementById("entryForm");
 const settingsForm = document.getElementById("settingsForm");
 const recordsList = document.getElementById("recordsList");
 const pinWarning = document.getElementById("pinWarning");
+const citizenIdInput = document.getElementById("citizenIdInput");
+const loginStatus = document.getElementById("loginStatus");
+const loginButton = document.getElementById("loginButton");
 
 /** An answer from the API that says no: its `code` is what gets translated. */
 class ApiError extends Error {
@@ -75,7 +84,7 @@ async function request(method, path, body) {
     response = await fetch(`${API}${path}`, {
       method,
       headers: {
-        Authorization: `Bearer ${adminToken}`,
+        ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -213,35 +222,87 @@ function applyDocumentFormatting(command) {
   }
 }
 
-function showDashboard() {
+function renderWho() {
+  document.getElementById("adminWho").textContent = currentAdmin
+    ? t("admin.who", { name: currentAdmin.name, citizenId: currentAdmin.citizenId })
+    : "";
+}
+
+function showDashboard(admin) {
+  currentAdmin = admin;
+  renderWho();
   loginPanel.classList.add("hidden");
   dashboard.classList.remove("hidden");
 }
 
 function showLogin() {
+  currentAdmin = null;
+  renderWho();
   loginPanel.classList.remove("hidden");
   dashboard.classList.add("hidden");
 }
 
+/** Forgets the session here (the server drops it on its own when it runs out). */
 function logout() {
   adminToken = "";
-  sessionStorage.removeItem("egovAdminToken");
+  sessionStorage.removeItem(SESSION_KEY);
   showLogin();
 }
 
-/** Checks the token, then opens the dashboard. A token left over from an earlier run fails quietly. */
-async function validateLogin({ quiet = false } = {}) {
+function setLoginStatus(message) {
+  loginStatus.textContent = message;
+  loginStatus.hidden = !message;
+  loginButton.disabled = Boolean(message);
+}
+
+async function openDashboard(admin) {
+  showDashboard(admin);
+  await switchSection(activeSection);
+}
+
+/** Asks the server whether this citizen is on the admin list, and opens the dashboard if so. */
+async function signIn(citizenId) {
+  setLoginStatus(t("admin.login.checking"));
   try {
-    await request("GET", "/auth");
-    sessionStorage.setItem("egovAdminToken", adminToken);
-    showDashboard();
-    await switchSection(activeSection);
+    const data = await request("POST", "/login", { citizenId });
+    adminToken = data.token;
+    sessionStorage.setItem(SESSION_KEY, adminToken);
+    await openDashboard(data.admin);
   } catch (error) {
     adminToken = "";
-    sessionStorage.removeItem("egovAdminToken");
+    sessionStorage.removeItem(SESSION_KEY);
     showLogin();
-    if (!quiet) showToast(errorText(error));
+    showError(error, "citizenIdInput");
+  } finally {
+    setLoginStatus("");
   }
+}
+
+/** Picks up a sign-in from earlier in this browser tab, if the server still honours it. */
+async function resumeSession() {
+  try {
+    const data = await request("GET", "/auth");
+    await openDashboard(data.admin);
+    return true;
+  } catch {
+    // Run out, or the server restarted: fall back to signing in again.
+    adminToken = "";
+    sessionStorage.removeItem(SESSION_KEY);
+    showLogin();
+    return false;
+  }
+}
+
+async function signOut() {
+  try {
+    await request("POST", "/logout");
+  } catch {
+    // The session is dropped here either way.
+  }
+  logout();
+  // Without this the kiosk's ?citizenId= would sign the same citizen straight back in.
+  forgetCurrentCitizenId();
+  citizenIdInput.value = "";
 }
 
 function configureEntryFields() {
@@ -583,16 +644,12 @@ async function switchSection(section) {
   await loadRecords();
 }
 
-document.getElementById("loginForm").addEventListener("submit", async (event) => {
+document.getElementById("loginForm").addEventListener("submit", (event) => {
   event.preventDefault();
-  adminToken = document.getElementById("adminToken").value.trim();
-  await validateLogin();
+  signIn(citizenIdInput.value.trim());
 });
 
-document.getElementById("logoutButton").addEventListener("click", () => {
-  logout();
-  document.getElementById("adminToken").value = "";
-});
+document.getElementById("logoutButton").addEventListener("click", signOut);
 
 document.getElementById("refreshButton").addEventListener("click", loadRecords);
 document.getElementById("cancelEditButton").addEventListener("click", resetForm);
@@ -624,6 +681,8 @@ document.getElementById("contentInput").addEventListener("keydown", (event) => {
 
 // Re-render the text that this script (rather than the markup) owns.
 onLangChange(() => {
+  renderWho();
+  if (!loginStatus.hidden) loginStatus.textContent = t("admin.login.checking");
   document.getElementById("editorEyebrow").textContent = sectionName(activeSection);
   document.getElementById("recordsTitle").textContent = sectionName(activeSection);
   renderEditorHeading();
@@ -634,5 +693,14 @@ onLangChange(() => {
 });
 
 configureEntryFields();
-if (adminToken) validateLogin({ quiet: true });
-else showLogin();
+
+// Inside the game the kiosk has already said who is using it: check that citizen
+// against the list without asking. Anywhere else the ID is typed in (or given as
+// /admin?citizenId=...).
+const kioskCitizenId = getCurrentCitizenId();
+citizenIdInput.value = kioskCitizenId;
+showLogin();
+(async () => {
+  if (adminToken && (await resumeSession())) return;
+  if (kioskCitizenId) await signIn(kioskCitizenId);
+})();
