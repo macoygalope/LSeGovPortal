@@ -1,7 +1,8 @@
 ---
-// Admin dashboard (non-kiosk build only; see astro.config.mjs). Client-side:
-// it talks to the Apps Script backend directly from the browser with the
-// admin token. The markup is carried over unchanged from the old admin.html.
+// Admin dashboard. Only `npm run admin` serves it (scripts/admin.mjs injects
+// the route, see src/lib/admin-integration.ts): it writes to the local
+// database, so it is in no build. Client-side: admin.js talks to the admin API
+// (src/lib/admin-api.ts) from the browser with the admin token.
 import "@fontsource/inter/latin-400.css";
 import "@fontsource/inter/latin-500.css";
 import "@fontsource/inter/latin-600.css";
@@ -68,6 +69,10 @@ const ariaLabel = (key: MessageKey) => ({ "aria-label": t(key), ...i18nAttr({ "a
         </div>
         <button class="button button-danger button-small" id="logoutButton" type="button"><I18n k="admin.logout" /></button>
       </div>
+
+      <p class="admin-notice" role="note">
+        <I18n k="admin.rebuild.note" /> <code>npm run build:kiosk</code>
+      </p>
 
       <div class="admin-layout">
         <aside class="admin-sidebar card">
@@ -265,6 +270,7 @@ const ariaLabel = (key: MessageKey) => ({ "aria-label": t(key), ...i18nAttr({ "a
               </div>
               <button class="button button-secondary button-small" id="refreshButton" type="button"><I18n k="admin.refresh" /></button>
             </div>
+            <p class="admin-warning hidden" id="pinWarning" role="status"></p>
             <div id="recordsList" class="records-list">
               <div class="loading-card">{t("admin.records.loading")}</div>
             </div>

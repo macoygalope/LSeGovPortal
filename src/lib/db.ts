@@ -81,7 +81,8 @@ const NEXT_SEQUENCE = `INSERT INTO numbering (section, year, last_sequence) VALU
 
 type Bound = string | number;
 
-function bindValue(field: Field, raw: Record<string, unknown>, now: string): Bound {
+/** A payload value as the column stores it: trimmed text, 0/1, a number, or a timestamp. */
+export function bindValue(field: Field, raw: Record<string, unknown>, now: string): Bound {
   const value = raw[field.key];
   switch (field.kind) {
     case "bool":
@@ -99,7 +100,8 @@ function userVersion(db: DatabaseSync): number {
   return Number((db.prepare("PRAGMA user_version").get() as { user_version: number }).user_version);
 }
 
-function inTransaction<T>(db: DatabaseSync, work: () => T): T {
+/** Runs `work` all-or-nothing. Can't be nested: SQLite has no nested BEGIN. */
+export function inTransaction<T>(db: DatabaseSync, work: () => T): T {
   db.exec("BEGIN IMMEDIATE");
   try {
     const result = work();
@@ -239,6 +241,14 @@ export function allocateSequence(db: DatabaseSync, section: NumberedSection, yea
 }
 
 /**
+ * Makes sure the next number handed out is past `sequence`, for a document
+ * that was numbered by hand. Moves the counter forward, never back.
+ */
+export function raiseSequence(db: DatabaseSync, section: NumberedSection, year: number, sequence: number): void {
+  db.prepare(RAISE_NUMBERING).run(section, year, sequence);
+}
+
+/**
  * The database as an Apps Script `action=all` payload, so it can go straight
  * through normalizePayload(). Like that endpoint it leaves drafts out unless
  * asked, which keeps a draft from reaching the static output even before
@@ -271,14 +281,14 @@ export function readPayload(
 }
 
 /**
- * What a build reads when EGOV_DB_FILE is set. Opens read-only and refuses a
- * missing or never-initialised file: opening would otherwise create an empty
+ * What a build reads unless EGOV_DATA_FILE is set. Opens read-only and refuses
+ * a missing or never-initialised file: opening would otherwise create an empty
  * database and the build would quietly publish an empty site.
  */
 export function readPayloadFromFile(path: string): ReturnType<typeof readPayload> {
   if (!existsSync(path)) {
     throw new Error(
-      `EGOV_DB_FILE points at "${path}", which does not exist. Create it with: npm run db:import -- --file fixtures/live-all.json`,
+      `The eGov database "${path}" does not exist (set EGOV_DB_FILE to use another path). Create it with: npm run db:import -- --file fixtures/live-all.json`,
     );
   }
   const db = new DatabaseSync(path, { readOnly: true });

@@ -7,6 +7,7 @@ import { LABELS } from "../lib/sections";
 import { withBase } from "../lib/url";
 import type { EgovRecord, SiteSettings } from "../lib/types";
 import BrandSeal from "./BrandSeal.astro";
+import CitizenScan from "./CitizenScan.astro";
 import ExternalAction from "./ExternalAction.astro";
 
 /**
@@ -67,6 +68,7 @@ const covers = await Promise.all(forms.map((form) => resolveImage(form.image, 12
           emptyKey: "viewer.defaultBody",
         })}
       />
+      {isKiosk && <CitizenScan />}
       <div class="official-document-footer">
         {isKiosk && form.url && (
           <p class="external-placeholder-note" {...i18n("viewer.kioskNote")}>

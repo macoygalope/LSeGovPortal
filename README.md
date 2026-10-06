@@ -2,18 +2,17 @@
 
 The Los Santos city-government portal: online forms, announcements, executive
 orders, resolutions and memorandums. Built with [Astro](https://astro.build) as
-a static site. Content is managed in a Google Sheet through an Apps Script
-backend and **baked into the pages at build time**, so the site makes no data
-requests when it loads.
+a static site. Content lives in a local SQLite database and is **baked into the
+pages at build time**, so the site makes no data requests when it loads.
 
 It has two build targets:
 
 | Command | Served from | Contains |
 |---|---|---|
-| `npm run build:kiosk` | `lspd-backend` at `/api/v1/websites/egov`, on in-game kiosk screens | The public site only |
-| `npm run build` | A domain root (e.g. GitHub Pages) | The public site plus `/admin` |
+| `npm run build:kiosk` | `lspd-backend` at `/api/v1/websites/egov`, on in-game kiosk screens | The kiosk site |
+| `npm run build` | A domain root (e.g. GitHub Pages) | The regular site |
 
-The kiosk build has **no admin page, no outbound links and no print buttons**.
+The kiosk build has **no outbound links and no print buttons**.
 Links to Google Forms, the booking calendar and signed copies become disabled
 "coming soon" placeholders until built-in forms exist, and links inside
 document bodies render as plain text. See `src/lib/kiosk.ts`.
@@ -22,9 +21,12 @@ document bodies render as plain text. See `src/lib/kiosk.ts`.
 
 ```sh
 npm install
-cp .env.example .env      # set PUBLIC_EGOV_API_URL to the Apps Script /exec URL
-npm run dev               # live data, http://localhost:4321
+npm run db:import -- --file fixtures/live-all.json   # creates data/egov.db
+npm run dev                                          # http://localhost:4321
 ```
+
+There is no backend to configure: a build and `npm run dev` read
+`data/egov.db`. `.env.example` lists the optional `EGOV_*` overrides.
 
 Node 22.13 or newer.
 
@@ -45,41 +47,56 @@ X-Internal-Api-Key: <INTERNAL_API_KEY>
 {"slug": "egov", "name": "Los Santos eGov", "type": "static"}
 ```
 
-**Content only changes when you rebuild.** After publishing something in the
-admin, run `npm run build:kiosk` and copy `dist/` again. A scheduled rebuild is
-also needed for pinned announcements that have an expiry date, because the pin
+**Content only changes when you rebuild.** After changing the database, run
+`npm run build:kiosk` and copy `dist/` again. A scheduled rebuild is also needed for pinned announcements that have an expiry date, because the pin
 is evaluated at build time.
 
-A build fails if the backend can't be reached. The wrapper in
+A build fails if the database is missing. The wrapper in
 `scripts/build.mjs` builds into `.build/` and only swaps it into `dist/` on
 success, so a failed build never leaves you with a half-written `dist/` to
 copy.
 
-To build from a saved response instead of the live backend:
+To build from a saved response instead of the database:
 
 ```sh
 EGOV_DATA_FILE=fixtures/live-all.json npm run build:kiosk
 ```
 
+### Citizen ID (fingerprint scan)
+
+On the kiosk build, each form's pop-out has a hold-to-scan fingerprint step.
+It works the same way as in `prestige-lspd-website`: `prestige-hardware`
+opens the kiosk with `?citizenId=` on the URL, the site keeps it in
+`sessionStorage` (so it survives clicking through to other pages), and holding
+the scan button looks the citizen up at
+`GET {PUBLIC_LSPD_API_URL}/api/v1/public/citizens/:citizenId` and shows their
+identity card. The id is taken as given, not re-verified.
+
+Set `PUBLIC_LSPD_API_URL` to `lspd-backend`'s origin **before**
+`npm run build:kiosk` (see `.env.example`): it is baked into the build. Without
+it, or when the site is opened outside the game, the scan reports an error.
+The code is in `src/lib/citizen.ts` and `src/scripts/citizen-scan.ts`.
+
 ## Local database (SQLite)
 
-A SQLite copy of the sheet, so a build doesn't need the Apps Script backend.
-It uses Node's built-in `node:sqlite`; there is nothing extra to install.
+The site's content lives in a SQLite file, `data/egov.db` (not committed). It
+uses Node's built-in `node:sqlite`; there is nothing extra to install.
 
 ```sh
-npm run db:import -- --file fixtures/live-all.json   # or --live, to pull from the backend
-EGOV_DB_FILE=data/egov.db npm run build:kiosk        # build from it
+npm run db:import -- --file fixtures/live-all.json   # create it from a saved response
+npm run build:kiosk                                  # build from it
 ```
 
-A build from the database is byte-for-byte the same site as one from the
-backend, because the database is read back out as the same `action=all`
-payload and goes through the same normalising. Like `EGOV_DATA_FILE`, set
-`EGOV_DB_FILE` in the shell for a build. A build fails, rather than publishing
-an empty site, if that file is missing or isn't an eGov database.
+The database is read back out as an `action=all` payload (the format of
+`fixtures/live-all.json`) and goes through the same normalising as a saved
+response, so the two give the same site. `EGOV_DB_FILE` picks another path and
+`EGOV_DATA_FILE` skips the database for a saved response. A build fails, rather
+than publishing an empty site, if the database is missing or isn't an eGov
+database.
 
 | Command | Does |
 |---|---|
-| `npm run db:import -- --file <json>` or `--live` | Loads a saved response, or the live backend. Refuses a database that already has content unless you add `--replace`. |
+| `npm run db:import -- --file <json>` | Loads a saved response. Refuses a database that already has content unless you add `--replace`. |
 | `npm run db:export -- --out backup.json` | Dumps the database in the same format, drafts included. |
 | `npm run db:migrate` | Brings an older database file up to the current schema. |
 
@@ -99,22 +116,73 @@ an empty site, if that file is missing or isn't an eGov database.
 
 **Things to know**
 
-- **It is a copy, not the source of truth.** The Google Sheet is still the CMS
-  and the admin dashboard still writes to it. Importing with `--replace`
-  overwrites whatever is in the database, and `--live` only brings published
-  records, because that is all the backend returns.
+- **The database is the source of truth.** Edit it in the admin dashboard
+  (`npm run admin`, below), or load a saved response with `db:import`. There is
+  no Google Sheet connection any more. Importing with `--replace` overwrites
+  whatever is in the database, so `db:export` a backup first.
 - **The database is stricter than the sheet.** Dates must be `YYYY-MM-DD`, a
   form needs its link, and two documents can't share a stored number. A bad
   row stops the whole import and the error names it.
-- **Numbering is worked out at import.** The backend doesn't return its
-  Numbering tab, so each counter starts at the highest number among the
+- **Numbering is worked out at import.** A saved response doesn't carry the
+  sheet's Numbering tab, so each counter starts at the highest number among the
   imported documents (stored year and sequence, else the printed
   "Blg. 07, Serye ng 2026"). If the real counter is ahead of that, because it
   already handed out numbers to documents since deleted, raise `last_sequence`
-  in `numbering`. `allocateSequence()` hands out the next number; nothing in
-  the admin uses it yet.
+  in `numbering`. `allocateSequence()` hands out the next number; the
+  dashboard calls it the first time an automatically numbered document is
+  published.
+- **Announcements can be edited in the database.** `src/lib/announcements.ts`
+  has `createAnnouncement`, `getAnnouncement`, `listAnnouncements`,
+  `updateAnnouncement` and `deleteAnnouncement`, each taking the open database
+  first. They write to `records` (the `announcements` view is read-only) and
+  refuse what `Code.gs` refused: no title, no content or link, content over
+  45,000 characters. The edits live only in this file, so the next
+  `db:import --replace` overwrites them. It covers announcements only: the
+  dashboard uses `src/lib/records.ts`, which does the same for every section.
 - **Changing the schema:** append a migration to `MIGRATIONS` in
   `src/lib/db-schema.ts`. Never edit one that has been applied.
+
+## Admin dashboard
+
+```sh
+npm run admin        # http://127.0.0.1:4322/admin
+```
+
+Adds, edits, publishes and deletes forms, announcements, executive orders,
+memorandums and resolutions, and edits the site settings (images, hero text,
+default signatory). It is the old dashboard, in Filipino and English, saving to
+`data/egov.db` instead of the Google Sheet.
+
+It is an Astro dev server that also serves the `/admin` page and the API behind
+it (`src/lib/admin-api.ts`). Because it writes to the database it exists only
+in this command: the page is in neither build, and `astro.config.mjs` doesn't
+know about it. The same process serves the site, so its pages show a saved
+change on the next reload.
+
+- **Log in** with the token printed at startup (new each run), or set
+  `EGOV_ADMIN_TOKEN` (16 characters or more) in `.env` to keep one. It travels
+  in a header, not a cookie, so another site can't make your browser send it.
+- **Local only by default.** `--host` opens it to other machines over plain
+  HTTP: anyone with the token can then edit the site. `--port` and
+  `--db <file>` pick another port or database. The database has to exist
+  already (`db:import`, or `db:migrate` for an empty one).
+- **Saving is not publishing.** A change reaches the kiosk only after
+  `npm run build:kiosk` and copying `dist/`. Drafts never reach a build.
+- **Numbering.** An executive order, memorandum or resolution is numbered the
+  first time it is published, in the year of its date: "Executive Order Blg. 07,
+  Serye ng 2026", "Memorandum Blg. 2026-12", "Resolusyon Blg. 02, Serye ng
+  2026". Deleting one never frees its number. A number typed by hand is kept
+  and moves the counter past it. The memorandum and resolution wording is what
+  the live documents use; no live executive order was numbered automatically, so
+  that wording is a guess: change `formatNumber()` in `src/lib/records.ts` if it
+  should read like the manual ones ("KAUTUSANG TAGAPAGPAGANAP BLG.: 07 Serye ng
+  2026").
+- **The rules** are the old backend's (a title, a form's link, content or a
+  link, at most 45,000 characters, a pin order of 1 to 3) plus: links must be
+  `http(s)`, dates must exist, numbered documents need a date, and a memorandum
+  needs a subject, a recipient and a sender. A live record that breaks them, such
+  as the welcome announcement with no content or link, has to be fixed before it
+  can be saved again.
 
 ## Layout
 
@@ -124,34 +192,37 @@ src/
     index.astro            home
     [section]/index.astro  archive: search, sort, pagination
     [section]/[id].astro   one page per document (memorandums get the formal layout)
-  admin/                   dashboard, non-kiosk build only (admin.js is still plain JS)
   components/              Layout, DocumentCard, FormViewer, ExternalAction, ...
   lib/                     data loading, normalising, sorting, markdown, image handling
-  lib/db.ts, db-schema.ts  the local SQLite copy of the sheet and its migrations
+  lib/db.ts, db-schema.ts  the local SQLite database and its migrations
+  lib/records.ts           create / read / update / delete a section's records, numbering included
+  lib/settings.ts          read / save the site settings
+  lib/announcements.ts     the same for announcements only (the dashboard uses records.ts)
+  lib/admin-api.ts         the dashboard's JSON API; admin-integration.ts adds it to the dev server
+  admin/                   the dashboard page and its script, served only by npm run admin
   lib/i18n.ts, messages/   localization: helpers and the Filipino / English catalogs
   scripts/                 small client scripts: form pop-out, archive search/sort, language switching
   styles/global.css
 scripts/build.mjs          build wrapper (staging folder, swapped into dist/ on success)
 scripts/db.mjs             db:import / db:export / db:migrate
+scripts/admin.mjs          npm run admin
 data/egov.db               the local database; created by db:import, not committed
-google-apps-script/Code.gs the sheet backend (see the warning below)
-fixtures/live-all.json     a saved backend response, used by the tests
+google-apps-script/Code.gs the old sheet backend; the site no longer uses it
+fixtures/live-all.json     a saved backend response: seeds the database, used by the tests
 legacy/                    the previous static site, kept for reference
 ```
 
 ## Languages
 
 The interface is available in Filipino (Tagalog, the default) and English. A
-dropdown in the footer of every page, including the admin dashboard, switches
-between them, and the choice is remembered in the browser.
+dropdown in the footer of every page switches between them, and the choice is remembered in the browser.
 
-- **What is translated:** buttons, headings, labels, dates, placeholders, error
-  messages and the admin dashboard. **What is not:** content typed into the
-  Google Sheet (titles, descriptions, document bodies, names) is shown as
-  written in both languages. The site settings that ship with default wording
-  (subtitle, hero text, meeting button, footer text) are translated only while
-  they still hold that default; once edited in the dashboard they are shown
-  as written.
+- **What is translated:** buttons, headings, labels, dates, placeholders and
+  error messages. **What is not:** content stored in the database (titles,
+  descriptions, document bodies, names) is shown as written in both languages.
+  The site settings that ship with default wording (subtitle, hero text,
+  meeting button, footer text) are translated only while they still hold that
+  default; once changed in the database they are shown as written.
 - **How it works:** pages are still built entirely in Filipino, so there is one
   build, one set of URLs and the kiosk hosting is unaffected. Translatable
   elements carry `data-i18n*` attributes and `src/scripts/i18n.ts` swaps the
@@ -164,9 +235,6 @@ between them, and the choice is remembered in the browser.
   `i18nAttr({ placeholder: "some.key" })`.
 - **Adding a language:** add it to `LANGS` and `LANG_NAMES` in
   `src/lib/i18n.ts`, create its catalog, and register it in `MESSAGES`.
-- **Backend errors:** the dashboard shows errors from `Code.gs`, which are
-  Filipino sentences. The `admin.be.*` messages must match them exactly, so
-  if you reword an error in `Code.gs`, reword it in `fil.ts` too.
 - **Kiosk:** the kiosk browser may not keep `localStorage`, in which case it
   simply opens in Filipino each time.
 
@@ -179,10 +247,12 @@ npm run check    # type-check
 
 ## Things to know
 
-- **`google-apps-script/Code.gs` is out of date.** The deployed backend returns
-  fields this copy doesn't know about (pinned announcements, auto-numbering,
-  memorandum fields, `uploadStatus`). The site is built against the *deployed*
-  backend. Don't redeploy from this copy without updating it first.
+- **The Google Sheet backend is retired.** The site no longer reads from it or
+  writes to it, and the `/admin` dashboard that called it is replaced by
+  `npm run admin`. `google-apps-script/Code.gs`
+  is kept for reference only, and it is out of date: the deployed backend
+  returns fields this copy doesn't know about (pinned announcements,
+  auto-numbering, memorandum fields, `uploadStatus`). Don't redeploy from it.
 - **Images are downloaded at build time** from the host in `image.domains`
   (`astro.config.mjs`), resized and converted to WebP. Add a new image host there.
 - **Archive search covers full document text**, which is embedded in each card.

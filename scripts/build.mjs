@@ -1,11 +1,11 @@
 // Builds into a staging folder and only replaces dist/ if the build succeeds.
 //
-// `astro build` empties its output folder before it fetches the eGov data, so
-// a failed fetch (backend down, bad URL) would otherwise leave dist/ half
+// `astro build` empties its output folder before it loads the eGov data, so
+// a failed load (missing database, bad file) would otherwise leave dist/ half
 // written -- and dist/ is what gets copied onto the server. With staging, a
 // failed build exits non-zero and the previous good dist/ is untouched.
 //
-//   node scripts/build.mjs            normal build (domain root, includes /admin)
+//   node scripts/build.mjs            normal build (domain root)
 //   node scripts/build.mjs --kiosk    kiosk build (served by lspd-backend)
 
 import { spawnSync } from "node:child_process";

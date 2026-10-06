@@ -1,5 +1,4 @@
-// Page-level language wiring, loaded by every page (Layout.astro and the
-// admin page): shows the saved language and drives the footer dropdown.
+// Page-level language wiring, loaded by every page (Layout.astro): shows the saved language and drives the footer dropdown.
 
 import { DEFAULT_LANG, isLang } from "../lib/i18n.ts";
 import { applyTranslations, getLang, setLang } from "./i18n.ts";

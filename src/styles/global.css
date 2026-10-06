@@ -1297,6 +1297,36 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
   text-transform: uppercase;
 }
 
+/* The dashboard's notes: what a save does (and doesn't) do yet, and a warning. */
+.admin-notice {
+  margin: 0 0 24px;
+  padding: 13px 16px;
+  border: 1px solid #bcd3f2;
+  border-radius: 12px;
+  background: var(--blue-light);
+  color: var(--navy-2);
+  font-size: 13px;
+}
+.admin-notice code {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+}
+.admin-warning {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border: 1px solid #e4c16d;
+  border-radius: 10px;
+  background: #fffaf0;
+  color: #7c5712;
+  font-size: 12px;
+}
+[aria-invalid="true"] {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(185, 54, 54, 0.12);
+}
+
 .archive-controls {
   display: flex;
   align-items: flex-end;
@@ -1514,4 +1544,126 @@ label { display: grid; gap: 7px; color: #435269; font-size: 12px; font-weight: 7
 
 @media (max-width: 640px) {
   .external-placeholder-note { text-align: left; }
+}
+
+/* Kiosk fingerprint scan and identity card (components/CitizenScan.astro) */
+.citizen-scan {
+  margin: 30px 58px 0;
+  padding: 22px 24px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.citizen-scan [hidden] { display: none !important; }
+
+.citizen-scan-intro { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+.citizen-scan-bullets { margin: 0 0 14px; padding-left: 20px; font-size: 14px; line-height: 1.65; }
+.citizen-scan-bullets li + li { margin-top: 6px; }
+.citizen-scan-ack { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+.scan-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.scan-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: #94a3b8;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+.scan-button:hover,
+.scan-button:focus-visible { border-color: var(--blue); }
+.scan-button.is-scanning { color: var(--blue); }
+
+.scan-fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 0;
+  background: rgba(31, 99, 183, 0.22);
+}
+
+.scan-icon { position: relative; z-index: 1; width: 40px; height: 40px; }
+
+.scan-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.scan-message { margin: 14px 0 0; color: var(--muted); font-size: 12px; text-align: center; }
+.scan-message.is-error {
+  padding: 9px 12px;
+  border: 1px solid #ffd0d0;
+  border-radius: 10px;
+  background: #fff0f0;
+  color: var(--red);
+}
+
+.identity-card { display: flex; gap: 18px; }
+
+.identity-photo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 84px;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: #94a3b8;
+}
+.identity-photo img { width: 100%; height: 100%; object-fit: cover; }
+.identity-photo-fallback { width: 36px; height: 36px; }
+
+.identity-details {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, auto));
+  gap: 12px 28px;
+  align-content: center;
+  justify-content: start;
+  min-width: 0;
+  margin: 0;
+}
+.identity-field { min-width: 0; }
+.identity-field-wide { grid-column: 1 / -1; }
+.identity-field dt {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.identity-field dd { margin: 0; color: var(--ink); font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.identity-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.identity-fingerprint { display: flex; align-items: baseline; gap: 8px; }
+.identity-fingerprint dt { margin: 0; }
+
+@media (max-width: 640px) {
+  .citizen-scan { margin: 24px 22px 0; padding: 18px; }
 }

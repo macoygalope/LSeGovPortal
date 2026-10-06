@@ -11,7 +11,6 @@ import {
   settingKey,
   t,
   translate,
-  translateBackendError,
   type MessageKey,
 } from "./i18n.ts";
 import { documentContentToHtml } from "./markdown.ts";
@@ -41,7 +40,7 @@ describe("message catalogs", () => {
 describe("translate", () => {
   it("fills in placeholders and leaves unknown ones alone", () => {
     assert.equal(translate("en", "home.forms.cardAria", { title: "Permit" }), "View the details of Permit first");
-    assert.equal(translate("en", "admin.uploadPart", { current: 2 }), "Uploading part 2 of {total}…");
+    assert.equal(translate("en", "viewer.coverAlt", { other: 2 }), "Image for {title}");
   });
 
   it("builds pages in the default language, which is Filipino", () => {
@@ -72,14 +71,6 @@ describe("site settings", () => {
   it("are translated only while they still hold the built-in default", () => {
     assert.equal(settingKey("footerText", DEFAULT_SETTINGS.footerText), "settings.footerText");
     assert.equal(settingKey("footerText", "© Custom footer"), undefined);
-  });
-});
-
-describe("backend errors", () => {
-  it("are translated by their exact Filipino text, and unknown ones pass through", () => {
-    assert.equal(translateBackendError("Mali ang admin token.", "en"), "The admin token is incorrect.");
-    assert.equal(translateBackendError("Mali ang admin token.", "fil"), "Mali ang admin token.");
-    assert.equal(translateBackendError("Something else", "en"), "Something else");
   });
 });
 

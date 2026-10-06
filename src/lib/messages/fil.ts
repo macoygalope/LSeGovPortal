@@ -154,6 +154,23 @@ export const fil = {
   "viewer.defaultBody": "Basahin ang mga detalye bago buksan ang form.",
   "viewer.kioskNote": "Ang online na form na ito ay idadagdag sa kiosk sa lalong madaling panahon.",
 
+  // --- Citizen scan (kiosk only) -------------------------------------------
+  "citizen.scan.intro": "Basahin muna ang sumusunod bago magpatuloy.",
+  "citizen.scan.bullet1": "I-i-scan ang iyong fingerprint upang makuha at mapatunayan ang iyong citizen record.",
+  "citizen.scan.bullet2":
+    "Ipapakita sa screen ang iyong pangalan, citizen ID, petsa ng kapanganakan, at fingerprint ID kapag napatunayan na ito.",
+  "citizen.scan.ack": "Sa pag-scan ng iyong fingerprint sa ibaba, sumasang-ayon kang magpatuloy sa serbisyong ito.",
+  "citizen.scan.hold": "Pindutin nang matagal para i-scan ang fingerprint",
+  "citizen.scan.scanning": "Nag-i-scan…",
+  "citizen.scan.verifying": "Binabeberipika ang iyong citizen record…",
+  "citizen.error": "Hindi mapatunayan ang iyong citizen record ({detail}). Pakisubukan muli.",
+  "citizen.id.photoAlt": "Larawan sa ID",
+  "citizen.id.fullName": "Buong Pangalan",
+  "citizen.id.citizenId": "Citizen ID",
+  "citizen.id.dateOfBirth": "Petsa ng Kapanganakan",
+  "citizen.id.fingerprintId": "Fingerprint ID:",
+  "citizen.id.notOnFile": "Walang talaan",
+
   // --- 404 -----------------------------------------------------------------
   "notFound.title": "Hindi Makita ang Pahina",
   "notFound.message": "Hindi makita ang pahinang iyong hinahanap.",
@@ -162,11 +179,14 @@ export const fil = {
   "admin.brandSub": "Dashboard ng Nilalaman",
   "admin.viewSite": "Tingnan ang Website",
   "admin.login.eyebrow": "Limitadong Access",
-  "admin.login.intro": "Ilagay ang pribadong admin token na itinakda sa Google Apps Script.",
+  "admin.login.intro":
+    "Ilagay ang admin token. Ipinapakita ito sa terminal na nagpatakbo ng npm run admin, o itakda ito sa EGOV_ADMIN_TOKEN.",
   "admin.login.submit": "Buksan ang Dashboard",
   "admin.login.helper": "Sa kasalukuyang browser session lamang pansamantalang itatago ang token.",
   "admin.dash.eyebrow": "Pamamahala ng Nilalaman",
   "admin.dash.intro": "Magdagdag, mag-edit, maglathala, o magtanggal ng nilalaman at mga larawan sa website.",
+  "admin.rebuild.note":
+    "Sine-save agad sa database ang mga pagbabago, pero lalabas lang ang mga ito sa website pagkatapos ng susunod na build.",
   "admin.logout": "Mag-log Out",
   "admin.tab.Settings": "Mga Larawan at Ayos",
 
@@ -184,10 +204,6 @@ export const fil = {
   "admin.save": "I-save ang Entry",
   "admin.update": "I-update ang Entry",
   "admin.saving": "Sine-save…",
-  "admin.preparing": "Inihahanda ang nilalaman…",
-  "admin.uploadPart": "Ina-upload ang bahagi {current} sa {total}…",
-  "admin.reuploadPart": "Muling ina-upload ang bahagi {current} sa {total}…",
-  "admin.finishing": "Tinatapos ang pag-save…",
 
   "admin.memo.eyebrow": "Structured na Memorandum",
   "admin.memo.title": "Detalye ng Memorandum",
@@ -266,6 +282,7 @@ export const fil = {
   "admin.pin.eyebrow": "Mahalagang Anunsyo",
   "admin.pin.title": "I-pin sa itaas",
   "admin.pin.help": "Hanggang tatlong aktibong anunsyo ang maaaring naka-pin.",
+  "admin.pin.tooMany": "May {count} na aktibong naka-pin na anunsyo. Tatlo lang ang ipinapakita sa website.",
   "admin.pin.checkbox": "I-pin bilang mahalagang anunsyo",
   "admin.pin.order": "Ayos ng Pin",
   "admin.pin.orderHelp": "1 ang pinakamauuna.",
@@ -284,7 +301,7 @@ export const fil = {
   "admin.url.help.doc": "Opsyonal na link sa signed PDF, Google Drive file, o opisyal na kopya.",
 
   // --- Admin: records ------------------------------------------------------
-  "admin.records.eyebrow": "Mga Record sa Google Sheet",
+  "admin.records.eyebrow": "Mga Record sa Database",
   "admin.records.loading": "Kinukuha ang mga record…",
   "admin.records.empty": "Wala pang record sa seksyong ito.",
   "admin.refresh": "I-refresh",
@@ -330,34 +347,31 @@ export const fil = {
   "admin.set.saved": "Na-save na ang mga larawan at setting ng website.",
 
   // --- Admin: toasts and errors --------------------------------------------
-  "admin.toast.tooLong": "Masyadong mahaba ang nilalaman. Hanggang 45,000 characters lamang.",
-  "admin.toast.needNumber": "Maglagay ng manual na numero o piliin ang awtomatikong numbering.",
   "admin.toast.updated": "Na-update na ang entry.{number}",
   "admin.toast.created": "Nagawa na ang bagong entry.{number}",
-  "admin.err.noApiUrl": "Ilagay muna ang Apps Script URL sa config.js.",
-  "admin.err.timeout": "Masyadong matagal ang tugon ng backend.",
   "admin.err.failed": "Hindi naisagawa ang kahilingan.",
-  "admin.err.connect": "Hindi makakonekta sa Google Apps Script.",
-  "admin.err.chunk": "Hindi ma-upload ang bahagi {index} sa {total}. {reason}",
-  "admin.err.retry": "Subukang muli.",
+  "admin.err.connect": "Hindi makakonekta sa admin server. Tumatakbo pa ba ang npm run admin?",
 
-  // Messages thrown by google-apps-script/Code.gs. The Filipino text must match
-  // the backend exactly: the dashboard looks incoming errors up by it.
+  // Codes the admin API answers with (src/lib/validation.ts): the dashboard shows admin.be.<code>.
   "admin.be.unknownAction": "Hindi kilalang action.",
-  "admin.be.needTitle": "Kailangan ang pamagat.",
-  "admin.be.contentTooLong": "Hanggang 45,000 characters lamang ang buong nilalaman.",
-  "admin.be.needFormLink": "Kailangan ang Google Form link.",
-  "admin.be.needContent": "Maglagay ng buong nilalaman o external link.",
-  "admin.be.needRecordId": "Kailangan ang record ID.",
-  "admin.be.recordNotFound": "Hindi makita ang record.",
-  "admin.be.badUploadId": "Hindi wasto ang upload ID.",
-  "admin.be.badChunkIndex": "Hindi wasto ang chunk index.",
-  "admin.be.badChunkCount": "Hindi wasto ang dami ng chunks.",
-  "admin.be.badContentUploadId": "Hindi wasto ang content upload ID.",
-  "admin.be.uploadExpired": "Nag-expire ang upload ng dokumento. Subukang i-save muli.",
-  "admin.be.uploadMissingPart": "May nawawalang bahagi ng dokumento. Subukang i-save muli.",
-  "admin.be.tokenNotSet": "Hindi pa naitatakda ang admin token.",
+  "admin.be.badRequest": "Hindi wasto ang kahilingan.",
+  "admin.be.tooLarge": "Masyadong malaki ang kahilingan.",
+  "admin.be.forbidden": "Hindi tinatanggap ang kahilingan mula sa ibang site.",
   "admin.be.wrongToken": "Mali ang admin token.",
   "admin.be.badSection": "Hindi wastong section.",
-  "admin.be.uploadIncomplete": "Hindi nakumpleto ang pag-upload ng dokumento. Subukang i-save muli.",
+  "admin.be.recordNotFound": "Hindi makita ang record.",
+  "admin.be.idTaken": "May record nang gumagamit ng ID na iyon.",
+  "admin.be.needTitle": "Kailangan ang pamagat.",
+  "admin.be.needMemoFields": "Kailangan ang paksa, ang Para Sa, at ang Mula Kay ng memorandum.",
+  "admin.be.needFormLink": "Kailangan ang Google Form link.",
+  "admin.be.needContent": "Maglagay ng buong nilalaman o external link.",
+  "admin.be.contentTooLong": "Hanggang 45,000 characters lamang ang buong nilalaman.",
+  "admin.be.fieldTooLong": "Hanggang {max} characters lamang ang field na ito.",
+  "admin.be.badUrl": "Dapat magsimula sa http:// o https:// ang link.",
+  "admin.be.badDate": "Hindi wasto ang petsa. Gamitin ang ganitong anyo: 2026-12-31.",
+  "admin.be.needDate": "Kailangan ang petsa ng dokumentong may numero.",
+  "admin.be.badPinOrder": "Ang ayos ng pin ay buong numero mula 1 hanggang {max}.",
+  "admin.be.needNumber": "Maglagay ng manual na numero o piliin ang awtomatikong numbering.",
+  "admin.be.numberTaken": "May ibang dokumentong gumagamit na ng numerong iyon.",
+  "admin.be.serverError": "May naganap na error sa server.",
 };

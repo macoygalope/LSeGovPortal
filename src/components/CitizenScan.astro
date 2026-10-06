@@ -1,0 +1,79 @@
+---
+import { i18n, i18nAttr, t } from "../lib/i18n";
+
+/**
+ * Kiosk only: the fingerprint-scan step and the identity card it reveals.
+ * Rendered inside every form's pop-out template (see FormViewer.astro);
+ * src/scripts/citizen-scan.ts wires it up each time a form is opened. Mirrors
+ * the ScanDisclaimerStep and IdentityCard of prestige-lspd-website.
+ */
+---
+
+<section class="citizen-scan" data-citizen-scan>
+  <div data-scan-step>
+    <p class="citizen-scan-intro" {...i18n("citizen.scan.intro")}>{t("citizen.scan.intro")}</p>
+    <ul class="citizen-scan-bullets">
+      <li {...i18n("citizen.scan.bullet1")}>{t("citizen.scan.bullet1")}</li>
+      <li {...i18n("citizen.scan.bullet2")}>{t("citizen.scan.bullet2")}</li>
+    </ul>
+    <p class="citizen-scan-ack" {...i18n("citizen.scan.ack")}>{t("citizen.scan.ack")}</p>
+
+    <div class="scan-action">
+      <button class="scan-button" type="button" data-scan-button aria-labelledby="citizenScanStatus">
+        <span class="scan-fill" data-scan-fill></span>
+        <svg
+          class="scan-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"></path>
+          <path d="M14 13.12c0 2.38 0 6.38-1 8.88"></path>
+          <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"></path>
+          <path d="M2 12a10 10 0 0 1 18-6"></path>
+          <path d="M2 16h.01"></path>
+          <path d="M21.8 16c.2-2 .131-5.354 0-6"></path>
+          <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"></path>
+          <path d="M8.65 22c.21-.66.45-1.32.62-2"></path>
+          <path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2"></path>
+        </svg>
+      </button>
+      <p class="scan-status" id="citizenScanStatus" data-scan-status {...i18n("citizen.scan.hold")}>
+        {t("citizen.scan.hold")}
+      </p>
+    </div>
+
+    <p class="scan-message" data-scan-message role="status" hidden></p>
+  </div>
+
+  <div class="identity-card" data-identity-card hidden>
+    <div class="identity-photo">
+      <img data-identity-photo alt={t("citizen.id.photoAlt")} {...i18nAttr({ alt: "citizen.id.photoAlt" })} hidden />
+      <svg class="identity-photo-fallback" data-identity-photo-fallback viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"></path>
+      </svg>
+    </div>
+    <dl class="identity-details">
+      <div class="identity-field identity-field-wide">
+        <dt {...i18n("citizen.id.fullName")}>{t("citizen.id.fullName")}</dt>
+        <dd data-identity-name></dd>
+      </div>
+      <div class="identity-field">
+        <dt {...i18n("citizen.id.citizenId")}>{t("citizen.id.citizenId")}</dt>
+        <dd class="identity-mono" data-identity-citizen-id></dd>
+      </div>
+      <div class="identity-field">
+        <dt {...i18n("citizen.id.dateOfBirth")}>{t("citizen.id.dateOfBirth")}</dt>
+        <dd data-identity-dob></dd>
+      </div>
+      <div class="identity-field identity-field-wide identity-fingerprint">
+        <dt {...i18n("citizen.id.fingerprintId")}>{t("citizen.id.fingerprintId")}</dt>
+        <dd class="identity-mono" data-identity-fingerprint></dd>
+      </div>
+    </dl>
+  </div>
+</section>

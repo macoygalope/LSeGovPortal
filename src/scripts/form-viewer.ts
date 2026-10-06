@@ -2,6 +2,7 @@
 // pop-out. The open form is mirrored in the URL hash (#form=<id>) so the
 // browser Back button closes it and a form can be linked to directly.
 
+import { mountCitizenScan } from "./citizen-scan.ts";
 import { applyTranslations } from "./i18n.ts";
 
 const viewer = document.getElementById("documentViewer");
@@ -29,6 +30,8 @@ function show(id: string): boolean {
   container.replaceChildren(template.content.cloneNode(true));
   // The template is pre-rendered in the default language; match the chosen one.
   applyTranslations(container);
+  // Kiosk build only: a fresh scan step each time a form is opened.
+  mountCitizenScan(container);
   viewer.classList.add("open");
   viewer.setAttribute("aria-hidden", "false");
   document.body.classList.add("viewer-open");

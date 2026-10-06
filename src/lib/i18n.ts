@@ -95,19 +95,3 @@ export function settingI18n(name: TranslatableSetting, value: string): Record<st
   const key = settingKey(name, value);
   return key ? i18n(key) : {};
 }
-
-/**
- * The dashboard shows errors thrown by google-apps-script/Code.gs, which are
- * Filipino sentences. `admin.be.*` messages are those exact sentences, so a
- * backend error can be mapped back to its key and shown in the chosen language.
- */
-const BACKEND_ERRORS = new Map<string, MessageKey>(
-  (Object.keys(fil) as MessageKey[])
-    .filter((key) => key.startsWith("admin.be."))
-    .map((key) => [fil[key], key]),
-);
-
-export function translateBackendError(message: string, lang: Lang): string {
-  const key = BACKEND_ERRORS.get(message);
-  return key ? translate(lang, key) : message;
-}
