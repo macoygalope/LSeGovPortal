@@ -15,6 +15,10 @@
  *
  * Migration 2 is the one table with no sheet equivalent: `site_admins`, the
  * whitelist for the admin dashboard.
+ *
+ * Migration 3 is not data at all: the `public_*` views, which are everything
+ * another reader of this database (the Prestige phone app, through
+ * lspd-backend) is allowed to see. See there.
  */
 export const MIGRATIONS: readonly string[] = [
   // 1: initial schema
@@ -144,5 +148,41 @@ CREATE TABLE site_admins (
   CONSTRAINT citizenid_not_empty CHECK (citizenid <> ''),
   CONSTRAINT name_not_empty CHECK (name <> '')
 ) STRICT;
+`,
+
+  // 3: what other readers may see
+  `
+-- lspd-backend serves this database to the phone app, but only through views
+-- whose names start with public_: it lists and reads those and nothing else, so
+-- whatever is not selected here cannot be reached, drafts and the admin list
+-- included. These views ARE the contract with the phone app's records
+-- (web/src/apps/egov/types.ts in prestige-smartphones): the same names, in
+-- camelCase because that is what the app reads. Add a column here and there
+-- together, and as a new migration; this one must not change once it ships.
+--
+-- Published documents only, and an announcement only if it has text to open
+-- (the live welcome post has none). A picture is shown only if it is an http(s)
+-- URL, so a bad value cannot become a file: or javascript: reference in the app.
+CREATE VIEW public_records AS
+  SELECT section, id, title, description, number, date,
+         created_at AS createdAt,
+         content,
+         CASE WHEN lower(substr(image, 1, 7)) = 'http://' OR lower(substr(image, 1, 8)) = 'https://'
+              THEN image ELSE '' END AS image,
+         memo_to AS memoTo, memo_from AS memoFrom, subject,
+         pinned, pin_order AS pinOrder, pin_expires AS pinExpires
+  FROM records
+  WHERE published = 1
+    AND section IN ('ExecutiveOrders', 'Resolutions', 'Memorandums', 'Announcements')
+    AND (section <> 'Announcements' OR trim(content, char(32, 9, 10, 13)) <> '');
+
+-- The mayor on the Officials screen, and nothing else of the site settings.
+CREATE VIEW public_settings AS
+  SELECT key,
+         CASE WHEN key = 'mayorImageUrl'
+                   AND NOT (lower(substr(value, 1, 7)) = 'http://' OR lower(substr(value, 1, 8)) = 'https://')
+              THEN '' ELSE value END AS value
+  FROM settings
+  WHERE key IN ('mayorName', 'mayorImageUrl');
 `,
 ];

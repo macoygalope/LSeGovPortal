@@ -70,6 +70,8 @@ describe("schema", () => {
       assert.equal(upgraded.prepare("SELECT count(*) AS n FROM records").get()!.n, 1);
       assert.equal(upgraded.prepare("SELECT count(*) AS n FROM site_admins").get()!.n, 0);
     } finally {
+      // Windows won't delete a folder with an open database in it.
+      for (const db of open.splice(0)) db.close();
       rmSync(dir, { recursive: true, force: true });
     }
   });

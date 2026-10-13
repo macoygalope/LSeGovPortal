@@ -36,20 +36,52 @@ Node 22.13 or newer.
 npm run build:kiosk
 ```
 
-Then copy the contents of `dist/` into `lspd-backend/websites/egov/`.
+That builds the site into `dist/`. You do not copy it to a server by hand: the pages,
+the public copy of the database (see [Building the copy for a server](#building-the-copy-for-a-server))
+and a small `site.json` that names the site travel together as one **bundle**, a `.zip`.
 
-The first time only, register the site so kiosks can pick it from the
-`/spawnprop` Website dropdown:
-
-```
-POST /api/v1/internal/websites
-X-Internal-Api-Key: <INTERNAL_API_KEY>
-{"slug": "egov", "name": "Los Santos eGov", "type": "static"}
+```sh
+npm run site:pack          # build both, write bundles/egov-<date>-<time>.zip, print its SHA-256
+npm run deploy -- staging  # build, upload over SSH and deploy it (see "Deploying to a server" below)
 ```
 
 **Content only changes when you rebuild.** After changing the database, run
-`npm run build:kiosk` and copy `dist/` again. A scheduled rebuild is also needed for pinned announcements that have an expiry date, because the pin
+`npm run deploy` (which rebuilds) or `npm run site:pack` again. A scheduled rebuild is also needed for pinned announcements that have an expiry date, because the pin
 is evaluated at build time.
+
+### Deploying to a server
+
+Two ways, both ending in prestige-nginx's `deploy-site.ps1` on the server, which unpacks
+the bundle, checks everything and deploys it (see `deploy/windows/README.md` there for
+the server's side, including the one-time SSH setup):
+
+- **One command, over SSH.** Put the `DEPLOY_*` settings from `.env.example` in `.env`
+  (the server, the folder holding the deploy scripts, a drop folder), then:
+
+  ```sh
+  npm run deploy -- check staging       # test the login, an upload and the server, step by step
+  npm run deploy -- staging             # build, upload, deploy
+  npm run deploy -- staging --dry-run   # upload, and have the server check it without changing anything
+  npm run deploy -- staging --only data # just the database (no rebuild)
+  npm run deploy -- production          # asks you to type "production" (or pass --yes)
+  npm run deploy -- production --zip bundles/egov-20261013-153000.zip   # the bundle staging already got
+  ```
+
+- **By hand, no SSH.** `npm run site:pack` makes the bundle and prints its SHA-256. Send that
+  one file to whoever runs the server; they drag it onto `deploy-site-staging.cmd` or
+  `deploy-site-production.cmd` in the server's `prestige-nginx\deploy\windows` folder.
+
+The first time only, add `--register` (`npm run deploy -- staging --register`, or
+`npm run site:pack -- --register`) so the server also registers the site, which is what lets kiosks
+pick it from the `/spawnprop` Website dropdown. (By hand that is
+`POST /api/v1/internal/websites` with `X-Internal-Api-Key` and
+`{"slug": "egov", "name": "Los Santos eGov", "type": "dynamic"}`.)
+
+Every bundle has `site.json` plus `content/` (this build) and/or `site.db` (the public
+copy); `--only data` or `--only content` packs just one. The format and every check the
+server makes are written down in `src/lib/site-bundle.ts`; the same checks run here
+first, so a mistake (a database file in the build, the wrong database) is caught before
+anything is sent. `bundles/` is not committed.
 
 A build fails if the database is missing. The wrapper in
 `scripts/build.mjs` builds into `.build/` and only swaps it into `dist/` on
@@ -145,6 +177,51 @@ database.
 - **Changing the schema:** append a migration to `MIGRATIONS` in
   `src/lib/db-schema.ts`. Never edit one that has been applied.
 
+## Data for other readers (the phone app)
+
+The Prestige phone's eGov app shows these records too. It never opens this
+database: lspd-backend serves a copy of it, read-only, and only through views
+whose names start with `public_`. Whatever those views select is public, and
+nothing else in the file can be reached, however it is deployed.
+
+| View | Holds |
+|---|---|
+| `public_records` | The published executive orders, resolutions, memorandums and announcements (an announcement only if it has text to open), with the columns the app reads: `section, id, title, description, number, date, createdAt, content, image, memoTo, memoFrom, subject, pinned, pinOrder, pinExpires`. A picture is kept only if it is an http(s) address. |
+| `public_settings` | The mayor's name and picture, and no other setting. |
+
+They are defined by migration 3 (`src/lib/db-schema.ts`) and are the contract with
+the app's records (`web/src/apps/egov/types.ts` in prestige-smartphones): a column
+added to one is added to the other, as a new migration. Tests fail if the
+columns drift, and compare the views with what the site shows, record for record,
+on the live data.
+
+**An existing database needs `npm run db:migrate` once** to get the views. Until
+then a build or `site:build` says so and stops.
+
+### Building the copy for a server
+
+```sh
+npm run site:build -- --out site.db
+```
+
+Reads this database (it is safe while the dashboard is open) and writes a copy
+with the drafts, forms, admin list and numbering counters removed. The file is
+rewritten after the deletes, because SQLite keeps a deleted row's bytes until
+then; a test searches the finished file for private text. It replaces `--out` if
+that is already a database, never writes over the database it reads or a file
+that is not a database, and checks the copy before it replaces anything, so a
+failed build leaves the last good file alone. The copy is also stamped in its
+file header (SQLite's `application_id`, the bytes `PUBD` at offset 68), which the
+deploy script reads to refuse any database that is not one, since a wrong path
+would otherwise put the drafts and the admin list on a public server. `--db` picks another source (default
+`$EGOV_DB_FILE`, then `data/egov.db`).
+
+Putting the file on the server (into lspd-backend's `data/sites/egov/site.db`,
+beside its websites folder, never inside it) is done on that machine; see
+lspd-backend's `websites/README.md`. In development you can point `EGOV_DB_FILE` at
+that path instead, and the dashboard edits what lspd-backend reads; only the
+`public_` views are ever reachable.
+
 ## Admin dashboard
 
 ```sh
@@ -222,7 +299,8 @@ src/
     [section]/[id].astro   one page per document (memorandums get the formal layout)
   components/              Layout, DocumentCard, FormViewer, ExternalAction, ...
   lib/                     data loading, normalising, sorting, markdown, image handling
-  lib/db.ts, db-schema.ts  the local SQLite database and its migrations
+  lib/db.ts, db-schema.ts  the local SQLite database and its migrations (migration 3: the public_ views)
+  lib/public-db.ts         the copy of the database for a server (site:build)
   lib/records.ts           create / read / update / delete a section's records, numbering included
   lib/settings.ts          read / save the site settings
   lib/announcements.ts     the same for announcements only (the dashboard uses records.ts)
@@ -234,6 +312,7 @@ src/
   styles/global.css
 scripts/build.mjs          build wrapper (staging folder, swapped into dist/ on success)
 scripts/db.mjs             db:import / db:export / db:migrate
+scripts/site-build.mjs     npm run site:build: the public copy of the database for a server
 scripts/admin.mjs          npm run admin
 scripts/admins.mjs         npm run admins: list / add / remove who may sign in
 data/egov.db               the local database; created by db:import, not committed

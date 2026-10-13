@@ -16,6 +16,9 @@
     "db:import": "node --experimental-strip-types --env-file-if-exists=.env scripts/db.mjs import",
     "db:export": "node --experimental-strip-types --env-file-if-exists=.env scripts/db.mjs export",
     "db:migrate": "node --experimental-strip-types --env-file-if-exists=.env scripts/db.mjs migrate",
+    "site:build": "node --experimental-strip-types --env-file-if-exists=.env scripts/site-build.mjs",
+    "site:pack": "node --experimental-strip-types --env-file-if-exists=.env scripts/pack.mjs",
+    "deploy": "node --experimental-strip-types --env-file-if-exists=.env scripts/deploy.mjs",
     "admin": "node --experimental-strip-types --env-file-if-exists=.env scripts/admin.mjs",
     "admins": "node --experimental-strip-types --env-file-if-exists=.env scripts/admins.mjs",
     "astro": "astro"
