@@ -333,6 +333,36 @@ describe("reading for a build", () => {
     }
   });
 
+  it("reads a database that is ahead of this checkout, as lspd-backend's is", () => {
+    const dir = mkdtempSync(join(tmpdir(), "egov-db-"));
+    try {
+      const file = join(dir, "site.db");
+      const db = openDb(file);
+      importPayload(db, live);
+      // What a later schema adds: tables and columns beside the ones read here.
+      db.exec("CREATE TABLE egov_staff (citizenid TEXT PRIMARY KEY); ALTER TABLE records ADD COLUMN created_by TEXT NOT NULL DEFAULT ''");
+      db.exec(`PRAGMA user_version = ${MIGRATIONS.length + 2}`);
+      db.close();
+      assert.deepEqual(normalizePayload(readPayloadFromFile(file)), normalizePayload(live));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("still refuses a database older than this checkout, and says how to bring it up", () => {
+    const dir = mkdtempSync(join(tmpdir(), "egov-db-"));
+    try {
+      const file = join(dir, "old.db");
+      const db = new DatabaseSync(file);
+      db.exec(MIGRATIONS[0]!);
+      db.exec("PRAGMA user_version = 1");
+      db.close();
+      assert.throws(() => readPayloadFromFile(file), /schema version 1.*db:migrate/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("fails rather than invent an empty site from a missing or blank file", () => {
     const dir = mkdtempSync(join(tmpdir(), "egov-db-"));
     try {

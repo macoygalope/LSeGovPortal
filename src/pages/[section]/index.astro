@@ -1,17 +1,10 @@
 ---
 import type { GetStaticPaths } from "astro";
 import Layout from "../../components/Layout.astro";
-import DocumentCard from "../../components/DocumentCard.astro";
-import { getEgovData } from "../../lib/data";
-import {
-  SORT_MODES,
-  localTodayIso,
-  orderedAnnouncements,
-  sortDocuments,
-  type SortMode,
-} from "../../lib/documents";
+import LoadStatus from "../../components/LoadStatus.astro";
 import { i18n, i18nAttr, t } from "../../lib/i18n";
 import { ARCHIVE_COPY, LABELS, SECTION_ROUTE } from "../../lib/sections";
+import { getBuildSettings } from "../../lib/snapshot";
 import { withBase } from "../../lib/url";
 import { DOCUMENT_SECTIONS, type DocumentSection } from "../../lib/types";
 
@@ -25,36 +18,18 @@ interface Props {
   section: DocumentSection;
 }
 
+// The frame of an archive: its heading, search and sort controls. The cards are
+// put in by scripts/egov-page.ts once the content is in, and scripts/archive.ts
+// then searches, sorts and pages them.
 const PAGE_SIZE = 9;
 const { section } = Astro.props;
-const { settings, sections } = await getEgovData();
+const settings = await getBuildSettings();
 const copy = ARCHIVE_COPY[section];
 const label = LABELS[section];
-const items = sections[section];
 
 // Announcements keep their pinned-first order and have no sort control; the
 // other archives are sortable.
 const sortable = section !== "Announcements";
-
-let cards: { item: (typeof items)[number]; pinned: boolean; ranks: Record<string, number> }[];
-if (section === "Announcements") {
-  const ordered = orderedAnnouncements(items, localTodayIso());
-  cards = ordered.map(({ item, pinned }, index) => ({ item, pinned, ranks: { newest: index } }));
-} else {
-  // Rank every card under every sort mode now, so the browser only has to
-  // order by a precomputed number and carries no sorting logic of its own.
-  const ranksById = new Map<string, Record<string, number>>(items.map((item) => [item.id, {}]));
-  for (const mode of SORT_MODES as readonly SortMode[]) {
-    sortDocuments(items, mode).forEach((item, index) => {
-      ranksById.get(item.id)![mode] = index;
-    });
-  }
-  cards = sortDocuments(items, "newest").map((item) => ({
-    item,
-    pinned: false,
-    ranks: ranksById.get(item.id)!,
-  }));
-}
 ---
 
 <Layout
@@ -62,6 +37,8 @@ if (section === "Announcements") {
   descriptionKey={copy.intro}
   settings={settings}
   noindex={section === "Memorandums"}
+  page="archive"
+  section={SECTION_ROUTE[section]}
 >
   <main>
     <section class="page-hero">
@@ -72,6 +49,8 @@ if (section === "Announcements") {
         <p {...i18n(copy.intro)}>{t(copy.intro)}</p>
       </div>
     </section>
+
+    <LoadStatus />
 
     <section class="section">
       {/* The data-*-key attributes hold message keys; scripts/archive.ts translates them. */}
@@ -108,29 +87,12 @@ if (section === "Announcements") {
                 </label>
               )
             }
-            <div class="archive-count" id="archiveCount">
-              {cards.length} {t(cards.length === 1 ? label.countSingular : label.countPlural)}
-            </div>
+            <div class="archive-count" id="archiveCount"></div>
           </div>
         </div>
 
         <div class="document-grid" id="archiveGrid" data-archive-grid>
-          {
-            cards.map(({ item, pinned, ranks }, index) => (
-              <DocumentCard
-                item={item}
-                section={section}
-                fallbackImage={settings.defaultDocumentImageUrl}
-                pinned={pinned}
-                ranks={ranks}
-                position={index}
-                hidden={index >= PAGE_SIZE}
-              />
-            ))
-          }
-          <div class:list={["empty-state", { hidden: cards.length > 0 }]} data-archive-empty>
-            {t(cards.length ? label.searchEmpty : label.empty)}
-          </div>
+          <div class="empty-state hidden" data-archive-empty></div>
         </div>
         <nav
           class="pagination"
@@ -143,8 +105,4 @@ if (section === "Announcements") {
       </div>
     </section>
   </main>
-
-  <script>
-    import "../../scripts/archive.ts";
-  </script>
 </Layout>

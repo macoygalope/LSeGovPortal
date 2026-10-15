@@ -1,9 +1,20 @@
 # Los Santos eGov
 
 The Los Santos city-government portal: online forms, announcements, executive
-orders, resolutions and memorandums. Built with [Astro](https://astro.build) as
-a static site. Content lives in a local SQLite database and is **baked into the
-pages at build time**, so the site makes no data requests when it loads.
+orders, resolutions and memorandums. Built with [Astro](https://astro.build).
+
+**The pages are a frame; the content arrives when a page opens.** Astro builds the
+header, the footer, the headings and the page's scripts. The forms, the documents and
+the settings (title, hero, mayor, footer) are fetched by the page itself, from
+lspd-backend's database for the site, and put in by `src/scripts/egov-page.ts`
+(markup from `src/lib/render.ts`). A record published in the in-game eGov app is
+on the next kiosk screen that opens a page, with no rebuild and no deploy.
+
+```
+page opens -> GET <site>/db/site_records + <site>/db/site_settings   (live, from lspd-backend)
+              if that fails -> /assets/snapshot.json                (the copy this build was made with)
+              if that fails -> an error, and a retry button
+```
 
 It has two build targets:
 
@@ -11,6 +22,11 @@ It has two build targets:
 |---|---|---|
 | `npm run build:kiosk` | `lspd-backend` at `/api/v1/websites/egov`, on in-game kiosk screens | The kiosk site |
 | `npm run build` | A domain root (e.g. GitHub Pages) | The regular site |
+
+The kiosk build asks the host it came from (same origin: no CORS, no address baked
+in, the one bundle works on staging and production). A build served from anywhere
+else sets `PUBLIC_EGOV_DATA_URL` to lspd-backend's site (see `.env.example`), or
+leaves it unset and shows only the copy it was made with.
 
 The kiosk build has **no outbound links and no print buttons**.
 Links to Google Forms, the booking calendar and signed copies become disabled
@@ -25,10 +41,20 @@ npm run db:import -- --file fixtures/live-all.json   # creates data/egov.db
 npm run dev                                          # http://localhost:4321
 ```
 
-There is no backend to configure: a build and `npm run dev` read
-`data/egov.db`. `.env.example` lists the optional `EGOV_*` overrides.
+There is no backend to configure for development: `npm run dev` shows the copy
+described below, read from `data/egov.db` on every page load, so a change made in
+the admin dashboard (`npm run admin`) shows on reload. `.env.example` lists the
+optional overrides.
 
 Node 22.13 or newer.
+
+### Trying it against a real lspd-backend
+
+Run lspd-backend with its eGov database (a copy of `data/egov.db` as
+`data/sites/egov/site.db` is enough; it is brought up to date when the server starts),
+put the kiosk build in its `websites/egov/` folder and open
+`http://localhost:8080/api/v1/websites/egov/`. Staff publishing in the in-game app,
+or through its admin API, shows up on the next load.
 
 ## Building and deploying to a kiosk
 
@@ -45,9 +71,21 @@ npm run site:pack          # build both, write bundles/egov-<date>-<time>.zip, p
 npm run deploy -- staging  # build, upload over SSH and deploy it (see "Deploying to a server" below)
 ```
 
-**Content only changes when you rebuild.** After changing the database, run
-`npm run deploy` (which rebuilds) or `npm run site:pack` again. A scheduled rebuild is also needed for pinned announcements that have an expiry date, because the pin
-is evaluated at build time.
+**A rebuild is for the frame, not the content.** The content is read live (see the
+top of this file), so publishing, editing or taking down a record needs no build, and
+a pinned announcement stops being pinned on its expiry date by itself (the page
+decides when it opens). Rebuild and deploy only when the pages themselves change: a
+layout, a script, the wording in `src/lib/messages/`. Deploy it with `--only content`
+once lspd-backend's database is the live one: a bundle that carries a database is
+refused for a site whose `site.db.live` marker is there (see below).
+
+**The copy.** Every build also writes `assets/snapshot.json`, the published content as
+it was when the build was made, for a page to show if lspd-backend does not answer.
+It is made from the database a build always read (`EGOV_DB_FILE`, default
+`data/egov.db`; a copy of lspd-backend's `site.db` will do) or `EGOV_DATA_FILE`. A
+build that was told where the content is and cannot read it fails. One that was told
+nothing and finds no `data/egov.db` goes on without a copy and says so; a page of
+that build shows nothing if lspd-backend is down.
 
 ### Deploying to a server
 
@@ -83,15 +121,18 @@ server makes are written down in `src/lib/site-bundle.ts`; the same checks run h
 first, so a mistake (a database file in the build, the wrong database) is caught before
 anything is sent. `bundles/` is not committed.
 
-A build fails if the database is missing. The wrapper in
-`scripts/build.mjs` builds into `.build/` and only swaps it into `dist/` on
-success, so a failed build never leaves you with a half-written `dist/` to
-copy.
+A build that was told where the content is (`EGOV_DB_FILE`, `EGOV_DATA_FILE`) and
+cannot read it fails. The wrapper in `scripts/build.mjs` builds into `.build/` and
+only swaps it into `dist/` on success, so a failed build never leaves you with a
+half-written `dist/` to copy.
 
-To build from a saved response instead of the database:
+To build the copy from a saved response instead of the database, or from a copy of
+lspd-backend's own database (which is ahead of this checkout's schema; reading it is
+fine, writing to it from here is not):
 
 ```sh
 EGOV_DATA_FILE=fixtures/live-all.json npm run build:kiosk
+EGOV_DB_FILE=D:/backup/site.db npm run build:kiosk
 ```
 
 ### Citizen ID (fingerprint scan)
@@ -101,13 +142,15 @@ It works the same way as in `prestige-lspd-website`: `prestige-hardware`
 opens the kiosk with `?citizenId=` on the URL, the site keeps it in
 `sessionStorage` (so it survives clicking through to other pages), and holding
 the scan button looks the citizen up at
-`GET {PUBLIC_LSPD_API_URL}/api/v1/public/citizens/:citizenId` and shows their
-identity card. The id is taken as given, not re-verified.
+`GET /api/v1/public/citizens/:citizenId` on the host the page came from, and shows
+their identity card. The id is taken as given, not re-verified.
 
-Set `PUBLIC_LSPD_API_URL` to `lspd-backend`'s origin **before**
-`npm run build:kiosk` (see `.env.example`): it is baked into the build. Without
-it, or when the site is opened outside the game, the scan reports an error.
-The code is in `src/lib/citizen.ts` and `src/scripts/citizen-scan.ts`.
+The kiosk is served by `lspd-backend` itself, so nothing is configured: the
+lookup goes to the same host, and the one bundle works on staging and on
+production. Set `PUBLIC_LSPD_API_URL` (see `.env.example`) only for a site
+served from somewhere else; it is baked into that build. Outside the game, with
+neither, the scan reports an error. The code is in `src/lib/citizen.ts` and
+`src/scripts/citizen-scan.ts`.
 
 ## Local database (SQLite)
 
@@ -197,6 +240,16 @@ on the live data.
 
 **An existing database needs `npm run db:migrate` once** to get the views. Until
 then a build or `site:build` says so and stops.
+
+**This site has views of its own, in lspd-backend.** The kiosk site reads more than
+the phone does (the forms, the link a document opens, the memorandum's signature, the
+hero and the footer), so lspd-backend defines `public_site_records` (every published
+record of all five sections, in the column names of this site's own data payload) and
+`public_site_settings` (the fifteen settings the site uses, no others) in its migration
+5 (`internal/egov/migrations/0005_site_views.sql` there). lspd-backend owns the schema
+now; they are not in `src/lib/db-schema.ts`. `fixtures/site-views.json` is a real reply
+of the two, and `src/lib/site-source.test.ts` checks that it makes exactly what
+`fixtures/live-all.json` makes: if a column changes on either side, that test fails.
 
 ### Building the copy for a server
 
@@ -293,12 +346,16 @@ change on the next reload.
 
 ```
 src/
-  pages/
+  pages/                   the frames: headings, hero, controls; the content is put in when a page opens
     index.astro            home
     [section]/index.astro  archive: search, sort, pagination
-    [section]/[id].astro   one page per document (memorandums get the formal layout)
-  components/              Layout, DocumentCard, FormViewer, ExternalAction, ...
-  lib/                     data loading, normalising, sorting, markdown, image handling
+    document.astro         one page for every document, read from ?section=&id= (memorandums get the formal layout)
+    assets/snapshot.json.ts  the copy of the content this build was made with (see "The copy")
+  components/              Layout, FormViewer, BrandSeal, LoadStatus, CitizenScan, ...
+  lib/site-source.ts       where a page gets its content: lspd-backend's views, else the copy
+  lib/render.ts            the markup of cards, document pages and the form pop-out, made from the content
+  lib/snapshot.ts          the copy a build keeps (and the settings its own markup starts from)
+  lib/                     normalising, sorting, markdown, formats
   lib/db.ts, db-schema.ts  the local SQLite database and its migrations (migration 3: the public_ views)
   lib/public-db.ts         the copy of the database for a server (site:build)
   lib/records.ts           create / read / update / delete a section's records, numbering included
@@ -308,7 +365,7 @@ src/
   lib/admins.ts            the site_admins whitelist; admin-auth.ts holds sessions and the sign-in limiter
   admin/                   the dashboard page and its script, served only by npm run admin
   lib/i18n.ts, messages/   localization: helpers and the Filipino / English catalogs
-  scripts/                 small client scripts: form pop-out, archive search/sort, language switching
+  scripts/                 client scripts: egov-page.ts (fetches the content and fills the page), form pop-out, archive search/sort, language switching
   styles/global.css
 scripts/build.mjs          build wrapper (staging folder, swapped into dist/ on success)
 scripts/db.mjs             db:import / db:export / db:migrate
@@ -332,10 +389,10 @@ dropdown in the footer of every page switches between them, and the choice is re
   The site settings that ship with default wording (subtitle, hero text,
   meeting button, footer text) are translated only while they still hold that
   default; once changed in the database they are shown as written.
-- **How it works:** pages are still built entirely in Filipino, so there is one
-  build, one set of URLs and the kiosk hosting is unaffected. Translatable
-  elements carry `data-i18n*` attributes and `src/scripts/i18n.ts` swaps the
-  text in the browser. Nothing is fetched at runtime.
+- **How it works:** pages are built, and the content is rendered, in Filipino, so
+  there is one build and one set of URLs. Translatable elements carry
+  `data-i18n*` attributes (the markup `src/lib/render.ts` makes carries them too)
+  and `src/scripts/i18n.ts` swaps the text in the browser, after the content is in.
 - **Changing or adding text:** edit `src/lib/messages/fil.ts` and
   `src/lib/messages/en.ts`. `en.ts` is typed from `fil.ts`, so `astro check`
   fails if a key is missing, and `npm test` checks that both languages use the
@@ -350,7 +407,7 @@ dropdown in the footer of every page switches between them, and the choice is re
 ## Tests
 
 ```sh
-npm test         # unit tests: normalising, sorting, numbering, pins, markdown, database
+npm test         # unit tests: normalising, sorting, numbering, pins, markdown, database, the data source and the markup
 npm run check    # type-check
 ```
 
@@ -362,11 +419,18 @@ npm run check    # type-check
   is kept for reference only, and it is out of date: the deployed backend
   returns fields this copy doesn't know about (pinned announcements,
   auto-numbering, memorandum fields, `uploadStatus`). Don't redeploy from it.
-- **Images are downloaded at build time** from the host in `image.domains`
-  (`astro.config.mjs`), resized and converted to WebP. Add a new image host there.
-- **Archive search covers full document text**, which is embedded in each card.
-  That is fine at a few dozen documents; move to a separate search index if the
-  archive grows into the hundreds.
-- **Archive pages need JavaScript** to show anything past page 1.
+- **Images load from where staff put them**, when a page opens. They are no
+  longer downloaded, resized and kept in the build, so a kiosk depends on that
+  image host (r2.fivemanage.com today) being up. A picture that fails to load
+  leaves its symbol. If that matters, copy a record's pictures into lspd-backend's
+  site `storage/` when it is published.
+- **A page needs JavaScript** to show anything: the content is fetched by the page.
+  (The archives already needed it for paging.)
+- **A response is capped at 5,000 rows and 8 MB** by lspd-backend. The site reads
+  every record at once, so it is fine at a few hundred documents; past that, the
+  views would need paging.
+- **Archive search covers full document text**, which is in each card. That is
+  fine at a few dozen documents; move to a separate search index if the archive
+  grows into the hundreds.
 - `dist/404.html` is built but `lspd-backend` doesn't serve it; unknown paths
   get its JSON 404.

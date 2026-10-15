@@ -14,6 +14,10 @@ export const fil = {
   "brand.sealAlt": "Selyo ng Los Santos",
   "kiosk.unavailable": "Hindi pa magagamit sa kiosk",
   "kiosk.comingSoon": "Malapit nang magamit",
+  "load.loading": "Kinukuha ang nilalaman…",
+  "load.error": "Hindi makuha ang nilalaman ngayon. Subukan muli.",
+  "load.retry": "Subukan muli",
+  "doc.notFound": "Hindi natagpuan ang dokumentong ito.",
 
   // --- Site settings defaults (translated only while still unchanged) ------
   "settings.siteSubtitle": "Opisyal na Portal ng Serbisyong Digital",

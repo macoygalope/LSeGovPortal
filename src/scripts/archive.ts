@@ -1,14 +1,14 @@
-// Search, sort and pagination for an archive page. Every card is already in
-// the HTML (see pages/[section]/index.astro); this only decides which are
-// visible and in what order. Sort positions are precomputed at build time as
-// data-rank-<mode>, so there is no sorting logic to keep in sync here.
+// Search, sort and pagination for an archive page. The cards are put in the
+// page by egov-page.ts (made by lib/render.ts) before this runs; this only
+// decides which are visible and in what order. Sort positions are precomputed
+// as data-rank-<mode> (lib/documents.ts, archiveEntries), so there is no
+// sorting logic to keep in sync here.
 
 import type { MessageKey } from "../lib/i18n.ts";
 import { onLangChange, t } from "./i18n.ts";
 
-const root = document.querySelector<HTMLElement>("[data-archive]");
-
-if (root) {
+/** Wires the archive inside `root` (the [data-archive] element), once its cards are in the page. */
+export function initArchive(root: HTMLElement): void {
   const grid = root.querySelector<HTMLElement>("[data-archive-grid]")!;
   const pagination = root.querySelector<HTMLElement>("[data-archive-pagination]")!;
   const emptyState = root.querySelector<HTMLElement>("[data-archive-empty]")!;

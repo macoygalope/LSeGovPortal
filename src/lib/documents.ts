@@ -1,4 +1,4 @@
-import type { EgovRecord } from "./types.ts";
+import type { DocumentSection, EgovRecord } from "./types.ts";
 
 export type SortMode = "newest" | "oldest" | "numberAsc" | "numberDesc";
 export const SORT_MODES: readonly SortMode[] = ["newest", "oldest", "numberAsc", "numberDesc"];
@@ -96,6 +96,44 @@ export function orderedAnnouncements(
     ...activePinned.map((item) => ({ item, pinned: true })),
     ...regular.map((item) => ({ item, pinned: false })),
   ];
+}
+
+export interface ArchiveEntry {
+  item: EgovRecord;
+  pinned: boolean;
+  /** Position under every sort mode, so the browser only orders by a number and has no sorting logic of its own. */
+  ranks: Record<string, number>;
+}
+
+/**
+ * The cards of an archive page, newest first (announcements: pinned first),
+ * each with its rank under every sort mode. Announcements have no sort
+ * control, so they carry only the one rank.
+ */
+export function archiveEntries(
+  section: DocumentSection,
+  items: readonly EgovRecord[],
+  todayIso: string,
+): ArchiveEntry[] {
+  if (section === "Announcements") {
+    return orderedAnnouncements(items, todayIso).map(({ item, pinned }, index) => ({
+      item,
+      pinned,
+      ranks: { newest: index },
+    }));
+  }
+
+  const ranksById = new Map<string, Record<string, number>>(items.map((item) => [item.id, {}]));
+  for (const mode of SORT_MODES) {
+    sortDocuments(items, mode).forEach((item, index) => {
+      ranksById.get(item.id)![mode] = index;
+    });
+  }
+  return sortDocuments(items, "newest").map((item) => ({
+    item,
+    pinned: false,
+    ranks: ranksById.get(item.id)!,
+  }));
 }
 
 /** Local-time YYYY-MM-DD, matching how the admin enters pin expiry dates. */

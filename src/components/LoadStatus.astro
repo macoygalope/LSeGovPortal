@@ -1,0 +1,13 @@
+---
+import { i18n, t } from "../lib/i18n";
+
+/**
+ * What a page shows while its content is on the way, and, if it cannot be had,
+ * the error and a retry button. scripts/egov-page.ts owns it: it hides it once
+ * the content is in.
+ */
+---
+
+<div class="container">
+  <div class="empty-state" data-load-status><span {...i18n("load.loading")}>{t("load.loading")}</span></div>
+</div>

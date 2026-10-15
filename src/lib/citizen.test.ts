@@ -173,9 +173,32 @@ describe("fetchCitizenIdentity", () => {
     await assert.rejects(fetchCitizenIdentity("NOPE", "http://x"), { message: "Request failed (404)" });
   });
 
+  it("asks the host the page came from when it is served by lspd-backend itself (the kiosk build), with nothing baked in", async () => {
+    const requested: string[] = [];
+    globals.fetch = async (url: string) => {
+      requested.push(url);
+      return { ok: true, json: async () => ({ citizen }) };
+    };
+    await fetchCitizenIdentity("ABC12345", undefined, true);
+    await fetchCitizenIdentity("ABC12345", "", true);
+    assert.deepEqual(requested, ["/api/v1/public/citizens/ABC12345", "/api/v1/public/citizens/ABC12345"]);
+  });
+
+  it("still goes to a configured address, without doubling its slash", async () => {
+    const requested: string[] = [];
+    globals.fetch = async (url: string) => {
+      requested.push(url);
+      return { ok: true, json: async () => ({ citizen }) };
+    };
+    await fetchCitizenIdentity("ABC12345", "https://gov-api.example//", true);
+    assert.deepEqual(requested, ["https://gov-api.example/api/v1/public/citizens/ABC12345"]);
+  });
+
   it("fails without a request when there is no id or no API URL", async () => {
     globals.fetch = async () => assert.fail("must not be requested");
     await assert.rejects(fetchCitizenIdentity("", "http://x"), { message: "No citizen ID" });
     await assert.rejects(fetchCitizenIdentity("ABC12345", ""), { message: "PUBLIC_LSPD_API_URL is not set" });
+    // Off the kiosk (a site served from elsewhere) there is no host to assume.
+    await assert.rejects(fetchCitizenIdentity("ABC12345", undefined, false), { message: "PUBLIC_LSPD_API_URL is not set" });
   });
 });

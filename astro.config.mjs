@@ -25,12 +25,6 @@ export default defineConfig({
     assets: "assets",
   },
 
-  // Remote images (r2.fivemanage.com) are downloaded and optimized at build
-  // time so the kiosk never depends on a third-party host at runtime.
-  image: {
-    domains: ["r2.fivemanage.com"],
-  },
-
   vite: {
     // Exposes the build target to components as import.meta.env.KIOSK
     // (see src/lib/kiosk.ts).

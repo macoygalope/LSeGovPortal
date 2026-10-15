@@ -24,9 +24,13 @@ interface Props {
   settings: SiteSettings;
   noindex?: boolean;
   bodyClass?: string;
+  /** Which page this is: scripts/egov-page.ts fills it with the content (see its header). */
+  page?: "home" | "archive" | "document";
+  /** The archive pages: the URL segment of the section they list. */
+  section?: string;
 }
 
-const { title, titleKey, description, descriptionKey, settings, noindex = false, bodyClass } = Astro.props;
+const { title, titleKey, description, descriptionKey, settings, noindex = false, bodyClass, page, section } = Astro.props;
 const pageName = titleKey ? t(titleKey) : title;
 const pageTitle = pageName ? `${pageName} — ${settings.siteTitle}` : settings.siteTitle;
 const metaDescriptionKey = description === undefined ? (descriptionKey ?? "site.description") : descriptionKey;
@@ -58,15 +62,15 @@ const nav: { href: string; key: MessageKey }[] = [
       data-title-suffix={titleKey ? settings.siteTitle : undefined}
     >{pageTitle}</title>
   </head>
-  <body class={bodyClass}>
+  <body class={bodyClass} data-page={page} data-section={section}>
     <div class="top-strip"></div>
     <header class="site-header">
       <div class="container header-inner">
         <a class="brand" href={withBase("/")} aria-label={settings.siteTitle}>
           <BrandSeal logoUrl={settings.logoUrl} />
           <span>
-            <strong>{settings.siteTitle}</strong>
-            <small {...settingI18n("siteSubtitle", settings.siteSubtitle)}>{settings.siteSubtitle}</small>
+            <strong data-site-title>{settings.siteTitle}</strong>
+            <small data-site-subtitle {...settingI18n("siteSubtitle", settings.siteSubtitle)}>{settings.siteSubtitle}</small>
           </span>
         </a>
         <button class="menu-button" id="menuButton" type="button" aria-label={t("nav.menuOpen")} {...i18nAttr({ "aria-label": "nav.menuOpen" })} aria-expanded="false">
@@ -85,12 +89,12 @@ const nav: { href: string; key: MessageKey }[] = [
         <div class="brand footer-brand">
           <BrandSeal logoUrl={settings.logoUrl} />
           <span>
-            <strong>{settings.siteTitle}</strong>
-            <small {...settingI18n("siteSubtitle", settings.siteSubtitle)}>{settings.siteSubtitle}</small>
+            <strong data-site-title>{settings.siteTitle}</strong>
+            <small data-site-subtitle {...settingI18n("siteSubtitle", settings.siteSubtitle)}>{settings.siteSubtitle}</small>
           </span>
         </div>
         <div class="footer-meta">
-          <p><span {...settingI18n("footerText", settings.footerText)}>{settings.footerText}</span></p>
+          <p><span data-site-footer {...settingI18n("footerText", settings.footerText)}>{settings.footerText}</span></p>
           <LanguageSelect />
         </div>
       </div>
@@ -99,6 +103,7 @@ const nav: { href: string; key: MessageKey }[] = [
     <script>
       import "../scripts/language.ts";
       import "../scripts/citizen-id.ts";
+      import "../scripts/egov-page.ts";
 
       const menuButton = document.getElementById("menuButton");
       const siteNav = document.getElementById("siteNav");

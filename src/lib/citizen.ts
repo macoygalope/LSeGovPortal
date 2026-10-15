@@ -108,15 +108,21 @@ export interface CitizenIdentity {
 /**
  * Resolves a citizenId (see getCurrentCitizenId) into the citizen's identity
  * via lspd-backend's public citizen-lookup endpoint.
+ *
+ * On the kiosk build the page is served by lspd-backend itself, so the lookup
+ * goes to the address the page came from (`/api/v1/public/...`): no address is
+ * baked into the build, and the one bundle works on staging and on production.
+ * PUBLIC_LSPD_API_URL is for a site served from somewhere else.
  */
 export async function fetchCitizenIdentity(
   citizenId: string,
-  apiUrl: string | undefined = import.meta.env.PUBLIC_LSPD_API_URL,
+  apiUrl: string | undefined = import.meta.env?.PUBLIC_LSPD_API_URL,
+  sameOrigin: boolean = import.meta.env?.KIOSK === true,
 ): Promise<CitizenIdentity> {
-  if (!apiUrl) throw new Error("PUBLIC_LSPD_API_URL is not set");
+  if (!apiUrl && !sameOrigin) throw new Error("PUBLIC_LSPD_API_URL is not set");
   if (!citizenId) throw new Error("No citizen ID");
 
-  const res = await fetch(`${apiUrl}/api/v1/public/citizens/${encodeURIComponent(citizenId)}`);
+  const res = await fetch(`${apiUrl ? apiUrl.replace(/\/+$/, "") : ""}/api/v1/public/citizens/${encodeURIComponent(citizenId)}`);
   if (!res.ok) {
     throw new Error(`Request failed (${res.status})`);
   }

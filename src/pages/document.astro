@@ -1,0 +1,18 @@
+---
+import Layout from "../components/Layout.astro";
+import LoadStatus from "../components/LoadStatus.astro";
+import { getBuildSettings } from "../lib/snapshot";
+
+// One page for every document: its section and id are in the address
+// (?section=executive-orders&id=...), and scripts/egov-page.ts fills <main>
+// with the document once the content is in (lib/render.ts, renderDocumentPage).
+// A page per document would need the content at build time, and a document
+// published afterwards would have none.
+const settings = await getBuildSettings();
+---
+
+<Layout settings={settings} page="document" bodyClass="memorandum-detail-body">
+  <main class="memorandum-detail-main" id="documentMain">
+    <LoadStatus />
+  </main>
+</Layout>

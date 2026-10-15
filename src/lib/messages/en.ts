@@ -13,6 +13,10 @@ export const en: Record<keyof typeof fil, string> = {
   "brand.sealAlt": "Seal of Los Santos",
   "kiosk.unavailable": "Not yet available on the kiosk",
   "kiosk.comingSoon": "Coming soon",
+  "load.loading": "Loading…",
+  "load.error": "The content could not be loaded right now. Please try again.",
+  "load.retry": "Try again",
+  "doc.notFound": "This document could not be found.",
 
   // --- Site settings defaults ----------------------------------------------
   "settings.siteSubtitle": "Official Digital Services Portal",

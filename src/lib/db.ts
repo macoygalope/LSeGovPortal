@@ -294,7 +294,11 @@ export function readPayloadFromFile(path: string): ReturnType<typeof readPayload
   const db = new DatabaseSync(path, { readOnly: true });
   try {
     const version = userVersion(db);
-    if (version !== MIGRATIONS.length) {
+    // An older file lacks something this reads. A newer one does not: migrations
+    // only add, so every table and column read below is still there. That is how
+    // a copy of lspd-backend's own database (which owns the schema now, and is
+    // ahead of this checkout) can be read here.
+    if (version < MIGRATIONS.length) {
       throw new Error(
         version === 0
           ? `"${path}" is not an eGov database (it has no schema). Create one with: npm run db:import`

@@ -1,52 +1,55 @@
 ---
 import Layout from "../components/Layout.astro";
-import CardMedia from "../components/CardMedia.astro";
-import DocumentCard from "../components/DocumentCard.astro";
-import ExternalAction from "../components/ExternalAction.astro";
 import FormViewer from "../components/FormViewer.astro";
-import { getEgovData } from "../lib/data";
-import { byAdminOrder, localTodayIso, orderedAnnouncements, sortDocuments } from "../lib/documents";
-import { i18n, i18nAttr, settingI18n, settingKey, t, type MessageKey } from "../lib/i18n";
-import { resolveImage } from "../lib/images";
+import LoadStatus from "../components/LoadStatus.astro";
+import { i18n, settingI18n, settingKey, t, type MessageKey } from "../lib/i18n";
+import { isKiosk } from "../lib/kiosk";
+import { externalAction, heroImageStyle, mayorPhoto } from "../lib/render";
 import { ARCHIVE_COPY, LABELS } from "../lib/sections";
+import { getBuildSettings } from "../lib/snapshot";
 import { withBase } from "../lib/url";
 
-const { settings, sections } = await getEgovData();
+// The frame of the home page: the headings and the hero. Its forms, its latest
+// documents and the numbers under the hero are put in by scripts/egov-page.ts
+// once the content is in (lib/render.ts, renderHome); the settings-driven parts
+// start from the settings this build was made with and are replaced by the
+// live ones.
+const settings = await getBuildSettings();
+const ctx = { base: import.meta.env.BASE_URL, kiosk: isKiosk };
+const heroStyle = heroImageStyle(settings.heroImageUrl);
 
-const forms = [...sections.Forms].sort(byAdminOrder);
-const announcements = orderedAnnouncements(sections.Announcements, localTodayIso()).slice(0, 3);
-const executiveOrders = sortDocuments(sections.ExecutiveOrders).slice(0, 3);
-const resolutions = sortDocuments(sections.Resolutions).slice(0, 3);
-
-const heroImage = await resolveImage(settings.heroImageUrl, 1600);
-const mayorImage = await resolveImage(settings.mayorImageUrl, 640);
-
-const stats: { id: string; count: number; label: MessageKey }[] = [
-  { id: "formsCount", count: sections.Forms.length, label: "home.stat.forms" },
-  { id: "announcementCount", count: sections.Announcements.length, label: LABELS.Announcements.plural },
-  { id: "ordersCount", count: sections.ExecutiveOrders.length, label: LABELS.ExecutiveOrders.plural },
-  { id: "documentsCount", count: sections.Resolutions.length, label: LABELS.Resolutions.plural },
+const stats: { id: string; label: MessageKey }[] = [
+  { id: "formsCount", label: "home.stat.forms" },
+  { id: "announcementCount", label: LABELS.Announcements.plural },
+  { id: "ordersCount", label: LABELS.ExecutiveOrders.plural },
+  { id: "documentsCount", label: LABELS.Resolutions.plural },
 ];
+
+const documentSections = [
+  { id: "announcements", grid: "announcementGrid", route: "/announcements/", section: "Announcements", muted: true },
+  { id: "executive-orders", grid: "executiveGrid", route: "/executive-orders/", section: "ExecutiveOrders", muted: false },
+  { id: "resolutions", grid: "resolutionGrid", route: "/resolutions/", section: "Resolutions", muted: false },
+] as const;
 ---
 
-<Layout settings={settings}>
+<Layout settings={settings} page="home">
   <main id="top">
-    <section
-      class:list={["hero", { "has-custom-image": heroImage }]}
-      id="heroSection"
-      style={heroImage ? `--hero-image: url("${heroImage}")` : undefined}
-    >
+    <section class:list={["hero", { "has-custom-image": heroStyle }]} id="heroSection" style={heroStyle || undefined}>
       <div class="container hero-grid">
         <div class="hero-copy">
           <span class="eyebrow" {...i18n("home.eyebrow")}>{t("home.eyebrow")}</span>
-          <h1 {...settingI18n("heroTitle", settings.heroTitle)}>{settings.heroTitle}</h1>
-          <p {...settingI18n("heroDescription", settings.heroDescription)}>{settings.heroDescription}</p>
+          <h1 data-hero-title {...settingI18n("heroTitle", settings.heroTitle)}>{settings.heroTitle}</h1>
+          <p data-hero-description {...settingI18n("heroDescription", settings.heroDescription)}>{settings.heroDescription}</p>
           <div class="hero-actions">
-            <ExternalAction
-              url={settings.meetingUrl}
-              label={settings.meetingButtonLabel}
-              labelKey={settingKey("meetingButtonLabel", settings.meetingButtonLabel)}
-              variant="primary"
+            <span
+              data-meeting-action
+              style="display: contents"
+              set:html={externalAction(ctx, {
+                url: settings.meetingUrl,
+                label: settings.meetingButtonLabel,
+                labelKey: settingKey("meetingButtonLabel", settings.meetingButtonLabel),
+                variant: "primary",
+              })}
             />
             <a class="button button-secondary" href="#announcements" {...i18n("home.viewAnnouncements")}>
               {t("home.viewAnnouncements")}
@@ -55,35 +58,23 @@ const stats: { id: string; count: number; label: MessageKey }[] = [
         </div>
 
         <aside class="hero-panel">
-          <div class="mayor-photo-wrap">
-            {
-              mayorImage ? (
-                <img
-                  id="mayorImage"
-                  class="mayor-photo"
-                  src={mayorImage}
-                  alt={t("home.mayorAlt")}
-                  {...i18nAttr({ alt: "home.mayorAlt" })}
-                />
-              ) : (
-                <div class="hero-panel-icon">🏛️</div>
-              )
-            }
-          </div>
+          <div class="mayor-photo-wrap" data-mayor-photo set:html={mayorPhoto(settings.mayorImageUrl)} />
           <p class="hero-panel-label" {...i18n("home.mayorOffice")}>{t("home.mayorOffice")}</p>
-          <h2>{settings.mayorName}</h2>
+          <h2 data-mayor-name>{settings.mayorName}</h2>
           <p {...i18n("home.motto")}>{t("home.motto")}</p>
           <div class="status-pill"><span></span> <span {...i18n("home.status")}>{t("home.status")}</span></div>
         </aside>
       </div>
     </section>
 
+    <LoadStatus />
+
     <section class="quick-stats">
       <div class="container stats-grid">
         {
           stats.map((stat) => (
             <div>
-              <strong id={stat.id}>{stat.count}</strong>
+              <strong id={stat.id}>–</strong>
               <span {...i18n(stat.label)}>{t(stat.label)}</span>
             </div>
           ))
@@ -100,126 +91,32 @@ const stats: { id: string; count: number; label: MessageKey }[] = [
           </div>
           <p {...i18n("home.forms.intro")}>{t("home.forms.intro")}</p>
         </div>
-        <div class="forms-grid" id="formsGrid">
-          {
-            forms.length ? (
-              forms.map((form) => (
-                <button
-                  class="form-card form-card-button"
-                  type="button"
-                  data-open-form
-                  data-id={form.id}
-                  aria-label={t("home.forms.cardAria", { title: form.title })}
-                  {...i18nAttr({ "aria-label": "home.forms.cardAria" }, { title: form.title })}
-                >
-                  <CardMedia image={form.image} icon={form.icon} />
-                  <div class="form-card-body">
-                    <h3>{form.title}</h3>
-                    <p {...(form.description ? {} : i18n("home.forms.cardDefault"))}>
-                      {form.description || t("home.forms.cardDefault")}
-                    </p>
-                    <span class="card-link" {...i18n(LABELS.Forms.readAction)}>{t(LABELS.Forms.readAction)}</span>
-                  </div>
-                </button>
-              ))
-            ) : (
-              <div class="empty-state" {...i18n("home.forms.empty")}>{t("home.forms.empty")}</div>
-            )
-          }
-        </div>
+        <div class="forms-grid" id="formsGrid"></div>
       </div>
     </section>
 
-    <section class="section section-muted document-section" id="announcements">
-      <div class="container">
-        <div class="section-heading section-heading-actions">
-          <div>
-            <span class="eyebrow" {...i18n(ARCHIVE_COPY.Announcements.eyebrow)}>
-              {t(ARCHIVE_COPY.Announcements.eyebrow)}
-            </span>
-            <h2 {...i18n(LABELS.Announcements.plural)}>{t(LABELS.Announcements.plural)}</h2>
-            <p {...i18n("home.announcements.intro")}>{t("home.announcements.intro")}</p>
-          </div>
-          <a class="button button-secondary" href={withBase("/announcements/")} {...i18n("home.viewAll")}>
-            {t("home.viewAll")}
-          </a>
-        </div>
-        <div class="document-grid" id="announcementGrid">
-          {
-            announcements.length ? (
-              announcements.map(({ item, pinned }) => (
-                <DocumentCard item={item} section="Announcements" pinned={pinned} />
-              ))
-            ) : (
-              <div class="empty-state" {...i18n(LABELS.Announcements.empty)}>
-                {t(LABELS.Announcements.empty)}
+    {
+      documentSections.map(({ id, grid, route, section, muted }) => (
+        <section class:list={["section", { "section-muted": muted }, "document-section"]} id={id}>
+          <div class="container">
+            <div class="section-heading section-heading-actions">
+              <div>
+                <span class="eyebrow" {...i18n(ARCHIVE_COPY[section].eyebrow)}>{t(ARCHIVE_COPY[section].eyebrow)}</span>
+                <h2 {...i18n(LABELS[section].plural)}>{t(LABELS[section].plural)}</h2>
+                <p {...i18n(section === "Announcements" ? "home.announcements.intro" : ARCHIVE_COPY[section].intro)}>
+                  {t(section === "Announcements" ? "home.announcements.intro" : ARCHIVE_COPY[section].intro)}
+                </p>
               </div>
-            )
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="section document-section" id="executive-orders">
-      <div class="container">
-        <div class="section-heading section-heading-actions">
-          <div>
-            <span class="eyebrow" {...i18n(ARCHIVE_COPY.ExecutiveOrders.eyebrow)}>
-              {t(ARCHIVE_COPY.ExecutiveOrders.eyebrow)}
-            </span>
-            <h2 {...i18n(LABELS.ExecutiveOrders.plural)}>{t(LABELS.ExecutiveOrders.plural)}</h2>
-            <p {...i18n(ARCHIVE_COPY.ExecutiveOrders.intro)}>{t(ARCHIVE_COPY.ExecutiveOrders.intro)}</p>
+              <a class="button button-secondary" href={withBase(route)} {...i18n("home.viewAll")}>
+                {t("home.viewAll")}
+              </a>
+            </div>
+            <div class="document-grid" id={grid}></div>
           </div>
-          <a class="button button-secondary" href={withBase("/executive-orders/")} {...i18n("home.viewAll")}>
-            {t("home.viewAll")}
-          </a>
-        </div>
-        <div class="document-grid" id="executiveGrid">
-          {
-            executiveOrders.length ? (
-              executiveOrders.map((item) => (
-                <DocumentCard item={item} section="ExecutiveOrders" fallbackImage={settings.defaultDocumentImageUrl} />
-              ))
-            ) : (
-              <div class="empty-state" {...i18n(LABELS.ExecutiveOrders.empty)}>
-                {t(LABELS.ExecutiveOrders.empty)}
-              </div>
-            )
-          }
-        </div>
-      </div>
-    </section>
-
-    <section class="section document-section" id="resolutions">
-      <div class="container">
-        <div class="section-heading section-heading-actions">
-          <div>
-            <span class="eyebrow" {...i18n(ARCHIVE_COPY.Resolutions.eyebrow)}>
-              {t(ARCHIVE_COPY.Resolutions.eyebrow)}
-            </span>
-            <h2 {...i18n(LABELS.Resolutions.plural)}>{t(LABELS.Resolutions.plural)}</h2>
-            <p {...i18n(ARCHIVE_COPY.Resolutions.intro)}>{t(ARCHIVE_COPY.Resolutions.intro)}</p>
-          </div>
-          <a class="button button-secondary" href={withBase("/resolutions/")} {...i18n("home.viewAll")}>
-            {t("home.viewAll")}
-          </a>
-        </div>
-        <div class="document-grid" id="resolutionGrid">
-          {
-            resolutions.length ? (
-              resolutions.map((item) => (
-                <DocumentCard item={item} section="Resolutions" fallbackImage={settings.defaultDocumentImageUrl} />
-              ))
-            ) : (
-              <div class="empty-state" {...i18n(LABELS.Resolutions.empty)}>
-                {t(LABELS.Resolutions.empty)}
-              </div>
-            )
-          }
-        </div>
-      </div>
-    </section>
+        </section>
+      ))
+    }
   </main>
 
-  <FormViewer forms={forms} settings={settings} />
+  <FormViewer settings={settings} />
 </Layout>
